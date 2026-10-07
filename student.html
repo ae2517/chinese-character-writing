@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>간화자 쓰기 – 학생</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="demoBanner" class="demo-banner hidden">⚠️ 데모 모드: Firebase 설정이 없어 이 기기에만 저장됩니다. (README.md 참고)</div>
+<div class="topbar"><div class="in">
+  <div class="logo"><span class="z">汉</span><span>간화자 쓰기</span></div>
+  <span id="who" class="small muted hidden"></span>
+  <button id="btnLogout" class="btn sm hidden">로그아웃</button>
+</div></div>
+
+<main class="wrap">
+
+<!-- 로그인 / 가입 -->
+<section id="viewAuth">
+  <div class="tabs">
+    <button class="tab on" data-t="login">로그인</button>
+    <button class="tab" data-t="signup">처음이에요 (회원가입)</button>
+  </div>
+
+  <form id="formLogin" class="card" autocomplete="on">
+    <h2>로그인</h2>
+    <label class="f" for="lgId">학습자 ID (학번)</label>
+    <input id="lgId" type="text" autocomplete="username" autocapitalize="off" required>
+    <label class="f" for="lgPw">비밀번호</label>
+    <input id="lgPw" type="password" autocomplete="current-password" required>
+    <div id="lgErr" class="err"></div>
+    <p class="small muted">비밀번호를 여러 번 틀려도 계정이 잠기지 않아요. 비밀번호를 잊었다면 교수님께 초기화를 요청하세요.</p>
+    <button class="btn primary" style="width:100%" type="submit">로그인</button>
+  </form>
+
+  <form id="formSignup" class="card hidden" autocomplete="off">
+    <h2>회원가입</h2>
+    <h3>연구 참여 동의</h3>
+    <div id="consentText" class="consent"></div>
+    <div class="radios" style="margin-top:10px">
+      <label><input type="radio" name="consent" value="yes" required> 동의합니다</label>
+      <label><input type="radio" name="consent" value="no"> 동의하지 않습니다 (학습은 가능, 데이터는 연구에 사용되지 않음)</label>
+    </div>
+
+    <h3 style="margin-top:18px">계정 정보</h3>
+    <div class="grid2">
+      <div><label class="f" for="suId">학습자 ID (학번 등, 영문/숫자/한글 2~30자)</label>
+        <input id="suId" type="text" autocapitalize="off" required></div>
+      <div><label class="f" for="suPw">비밀번호 (4자 이상)</label>
+        <input id="suPw" type="password" autocomplete="new-password" minlength="4" required></div>
+    </div>
+
+    <h3 style="margin-top:18px">기본 정보</h3>
+    <div class="grid3">
+      <div><label class="f" for="suNat">국적</label>
+        <select id="suNat" required>
+          <option value="">선택</option><option>대한민국</option><option>중국</option><option>일본</option><option>베트남</option>
+          <option>몽골</option><option>우즈베키스탄</option><option>미국</option><option>기타</option>
+        </select>
+        <input id="suNatEtc" class="hidden" type="text" placeholder="국적 직접 입력" style="margin-top:6px"></div>
+      <div><label class="f" for="suGrade">학년</label>
+        <select id="suGrade" required>
+          <option value="">선택</option><option>1학년</option><option>2학년</option><option>3학년</option><option>4학년</option>
+          <option>대학원생</option><option>기타</option>
+        </select></div>
+      <div><label class="f" for="suMajor">전공</label>
+        <input id="suMajor" type="text" required></div>
+    </div>
+    <label class="f">성별</label>
+    <div class="radios">
+      <label><input type="radio" name="gender" value="여" required> 여</label>
+      <label><input type="radio" name="gender" value="남"> 남</label>
+      <label><input type="radio" name="gender" value="기타"> 기타</label>
+      <label><input type="radio" name="gender" value="응답하지 않음"> 응답하지 않음</label>
+    </div>
+
+    <div class="grid2">
+      <div><label class="f">중국어 학습 기간</label>
+        <div class="row" style="flex-wrap:nowrap">
+          <input id="suCnY" type="number" min="0" max="60" value="0" required style="width:50%"> 년
+          <input id="suCnM" type="number" min="0" max="11" value="0" required style="width:50%"> 개월
+        </div></div>
+      <div><label class="f">한자 학습 기간</label>
+        <div class="row" style="flex-wrap:nowrap">
+          <input id="suHzY" type="number" min="0" max="60" value="0" required style="width:50%"> 년
+          <input id="suHzM" type="number" min="0" max="11" value="0" required style="width:50%"> 개월
+        </div></div>
+    </div>
+
+    <label class="f">한자 친숙도 (자기평가)</label>
+    <div class="likert" id="likert">
+      <label><input type="radio" name="fam" value="1" required>1</label><label><input type="radio" name="fam" value="2">2</label>
+      <label><input type="radio" name="fam" value="3">3</label><label><input type="radio" name="fam" value="4">4</label>
+      <label><input type="radio" name="fam" value="5">5</label><label><input type="radio" name="fam" value="6">6</label>
+      <label><input type="radio" name="fam" value="7">7</label>
+    </div>
+    <div class="likert-ends"><span>1 = 전혀 친숙하지 않다</span><span>7 = 매우 친숙하다</span></div>
+
+    <div id="suErr" class="err"></div>
+    <button class="btn primary" style="width:100%;margin-top:14px" type="submit">가입하고 시작하기</button>
+  </form>
+</section>
+
+<!-- 홈: 과 / 단어 목록 -->
+<section id="viewHome" class="hidden">
+  <div class="card">
+    <h2>오늘의 단어</h2>
+    <p class="muted small" style="margin-top:-6px">단어를 누르면 획순을 보고 → 따라 쓰고 → 빈칸에 직접 쓰는 연습이 시작돼요.</p>
+    <div id="lessonChips" class="chips"></div>
+    <div id="wordGrid" class="words"></div>
+    <p id="noWords" class="muted hidden">아직 등록된 단어가 없어요. 교수님이 단어를 등록하면 여기에 나타납니다.</p>
+  </div>
+  <p id="syncInfo" class="small muted"></p>
+</section>
+
+<!-- 연습 -->
+<section id="viewPractice" class="hidden">
+  <div class="pbar">
+    <button id="btnBack" class="btn sm">← 단어 목록</button>
+    <span id="roundInfo" class="pill"></span>
+    <span class="timer" id="timer">⏱ 0.0초</span>
+  </div>
+  <div class="card">
+    <div class="wordhead">
+      <div id="whHz" class="hz"></div>
+      <div id="whPy" class="py"></div>
+      <div id="whKo" class="ko"></div>
+      <button id="btnSpeak" class="btn sm" style="margin-top:6px">🔊 발음 듣기</button>
+    </div>
+    <div class="stage">
+      <button class="stagebtn" data-mode="trace">① 획순 보고 따라쓰기</button>
+      <button class="stagebtn" data-mode="blank">② 빈칸에 직접 쓰기</button>
+    </div>
+    <div id="boxes" class="boxes"></div>
+    <div id="dots" class="dots"></div>
+    <div class="tools">
+      <button id="btnReplay" class="btn sm">▶ 획순 다시 보기</button>
+      <button id="btnHint" class="btn sm">💡 다음 획 힌트</button>
+      <button id="btnUndo" class="btn sm">↩ 되돌리기</button>
+      <button id="btnClear" class="btn sm">🧹 이 글자 지우기</button>
+      <button id="btnNextChar" class="btn sm hidden">다음 글자 ▶</button>
+      <button id="btnSubmit" class="btn primary">✅ 다 썼어요 (채점)</button>
+    </div>
+    <div id="fb" class="fb"><div class="t">준비되면 써 보세요 ✍️</div><div class="muted small">획을 하나 쓸 때마다 바로 알려 드려요. 틀리면 ↩ 되돌리기로 고쳐 쓸 수 있어요.</div></div>
+  </div>
+  <div id="result" class="card result hidden"></div>
+</section>
+
+</main>
+
+<script type="module" src="js/config.js"></script>
+<script type="module" src="js/common.js"></script>
+<script type="module" src="js/db.js"></script>
+<script type="module" src="js/evaluate.js"></script>
+<script type="module" src="js/hanzi.js"></script>
+<script type="module" src="js/student.js"></script>
+</body>
+</html>

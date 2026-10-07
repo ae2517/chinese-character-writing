@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>간화자 쓰기 – 교수</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="demoBanner" class="demo-banner hidden">⚠️ 데모 모드: Firebase 설정이 없어 이 기기(브라우저)에만 저장됩니다. 데모 로그인 비밀번호: <b>demo</b></div>
+<div class="topbar"><div class="in">
+  <div class="logo"><span class="z">汉</span><span>간화자 쓰기 · 교수</span></div>
+  <button id="btnLogout" class="btn sm hidden">로그아웃</button>
+</div></div>
+
+<main class="wrap">
+
+<section id="viewLogin" class="hidden">
+  <form id="formLogin" class="card" style="max-width:420px;margin:30px auto">
+    <h2>교수 로그인</h2>
+    <label class="f" for="pfEmail">이메일</label>
+    <input id="pfEmail" type="email" autocomplete="username" required>
+    <label class="f" for="pfPw">비밀번호</label>
+    <input id="pfPw" type="password" autocomplete="current-password" required>
+    <div id="pfErr" class="err"></div>
+    <button class="btn primary" style="width:100%;margin-top:12px" type="submit">로그인</button>
+  </form>
+</section>
+
+<section id="viewMain" class="hidden">
+  <div class="tabs" id="mainTabs">
+    <button class="tab on" data-p="pWords">① 단어 등록</button>
+    <button class="tab" data-p="pData">② 학습 데이터</button>
+    <button class="tab" data-p="pStats">③ 회차별 변화</button>
+    <button class="tab" data-p="pStudents">④ 학생 목록</button>
+  </div>
+
+  <!-- ① 단어 등록 -->
+  <div id="pWords" class="panel">
+    <div class="card">
+      <h2>오늘 배운 단어 등록</h2>
+      <p class="muted small" style="margin-top:-6px">중국어 단어만 입력하면 한어병음과 한국어 뜻이 자동으로 채워집니다. (뜻은 자동 번역이므로 저장 전에 꼭 확인·수정하세요.)</p>
+      <div class="grid3">
+        <div><label class="f" for="wLesson">과(Lesson)</label><input id="wLesson" type="text" list="lessonList" placeholder="예: 3과" required><datalist id="lessonList"></datalist></div>
+        <div><label class="f" for="wDate">수업 날짜</label><input id="wDate" type="date"></div>
+      </div>
+      <label class="f" for="wInput">중국어 단어 (줄바꿈·쉼표·공백으로 여러 개 구분)</label>
+      <textarea id="wInput" placeholder="学生&#10;老师&#10;图书馆"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="btnAuto" class="btn blue">✨ 병음·뜻 자동 생성</button>
+        <span id="autoInfo" class="small muted"></span>
+      </div>
+      <div id="previewWrap" class="hidden" style="margin-top:14px">
+        <div class="tscroll"><table class="t" id="previewTbl"></table></div>
+        <div class="row" style="margin-top:10px">
+          <button id="btnSaveWords" class="btn primary">💾 저장하고 학생에게 공개</button>
+          <span class="small muted">같은 과·같은 단어를 다시 저장하면 내용이 갱신됩니다.</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>등록된 단어</h2>
+      <div id="wordList"></div>
+    </div>
+  </div>
+
+  <!-- ② 학습 데이터 -->
+  <div id="pData" class="panel hidden">
+    <div class="card">
+      <div class="row sp">
+        <h2 style="margin:0">학습 데이터 (시도별)</h2>
+        <div class="row">
+          <button id="btnRefresh" class="btn sm">🔄 새로 불러오기</button>
+          <button id="btnXlsxAll" class="btn primary sm">⬇ 엑셀 다운로드 (전체)</button>
+          <button id="btnXlsxFilt" class="btn sm">⬇ 엑셀 (현재 필터만)</button>
+        </div>
+      </div>
+      <div class="stat" id="dataStat" style="margin-top:12px"></div>
+      <div class="filters" id="dataFilters"></div>
+      <div class="tscroll"><table class="t" id="dataTbl"></table></div>
+      <p class="small muted" id="dataNote"></p>
+    </div>
+  </div>
+
+  <!-- ③ 회차별 변화 -->
+  <div id="pStats" class="panel hidden">
+    <div class="card">
+      <h2>회차별 변화 (1회차 → N회차)</h2>
+      <div class="filters" id="statFilters"></div>
+      <div class="chartbox"><canvas id="chScore"></canvas></div>
+      <div class="chartbox" style="height:240px"><canvas id="chTime"></canvas></div>
+      <div class="tscroll"><table class="t" id="statTbl"></table></div>
+      <h3 style="margin-top:16px">학습자별 변화 (첫 회차 → 마지막 회차)</h3>
+      <div class="tscroll"><table class="t" id="perStudentTbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ④ 학생 -->
+  <div id="pStudents" class="panel hidden">
+    <div class="card">
+      <h2>학생 목록</h2>
+      <div class="tscroll"><table class="t" id="stuTbl"></table></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script type="module" src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module" src="js/common.js"></script>
+<script type="module" src="js/db.js"></script>
+<script type="module" src="js/hanzi.js"></script>
+<script type="module" src="js/export.js"></script>
+<script type="module" src="js/professor.js"></script>
+</body>
+</html>

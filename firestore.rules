@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ▼▼▼ 교수 계정 이메일로 바꾸세요 (Firebase Authentication 에 만든 그 이메일) ▼▼▼
+    function isProf() {
+      return request.auth != null && request.auth.token.email == 'PROFESSOR_EMAIL@example.com';
+    }
+
+    // 단어: 누구나 읽기, 교수만 쓰기
+    match /words/{id} {
+      allow read: if true;
+      allow write: if isProf();
+    }
+
+    // 학생: 로그인(ID로 1건 조회)·가입(신규 생성)은 누구나, 목록 조회·수정·삭제는 교수만
+    match /students/{sid} {
+      allow get: if true;
+      allow create: if request.resource.data.id == sid
+                    && request.resource.data.passHash is string;
+      allow list, update, delete: if isProf();
+    }
+
+    // 연습 진행(회차 수): 기기를 바꿔도 이어서 세기 위한 카운터 (삭제 불가)
+    match /progress/{pid} {
+      allow read, create, update: if true;
+      allow delete: if isProf();
+    }
+
+    // 로그인 기록: 학생은 쓰기만, 읽기는 교수만
+    match /logins/{lid} {
+      allow create: if request.resource.data.studentId is string;
+      allow read, update, delete: if isProf();
+    }
+
+    // 학습 기록: 학생은 '새로 쓰기'만 가능, 읽기·수정·삭제는 교수만
+    match /attempts/{aid} {
+      allow create: if request.resource.data.studentId is string
+                    && request.resource.data.id == aid;
+      allow read, update, delete: if isProf();
+    }
+    match /attemptStrokes/{aid} {
+      allow create: if request.resource.data.id == aid;
+      allow read, update, delete: if isProf();
+    }
+  }
+}
