@@ -71,7 +71,7 @@
     $("#btnAuto").disabled = true; $("#autoInfo").textContent = "병음·뜻을 만드는 중…";
     draft = await Promise.all(tokens.map(async w => {
       let py = "";
-      try { py = window.pinyinPro ? pinyinPro.pinyin(w, { toneType: "symbol" }) : ""; } catch (e) { /* 수동 입력 */ }
+      try { py = window.pinyinPro ? pinyinPro.pinyin(w, { toneType: "symbol" }).replace(/\s+/g, "") : ""; } catch (e) { /* 수동 입력 */ }
       const chars = [...w].filter(Hanzi.isHan);
       const datas = await Promise.all(chars.map(c => Hanzi.load(c)));
       const missing = chars.filter((c, i) => datas[i] === null);
@@ -112,7 +112,7 @@
     const list = ok.map((d, i) => {
       const id = lesson.replace(/[\/\\#?[\]]/g, "-") + "__" + d.word;
       const old = P.words.find(w => w.id === id);
-      return { id, lesson, word: d.word, pinyin: d.pinyin.trim(), meaning: d.meaning.trim(), date: $("#wDate").value || Util.today(), createdAt: old ? old.createdAt : Date.now(), order: old ? old.order : base + i + 1 };
+      return { id, lesson, word: d.word, pinyin: d.pinyin.replace(/\s+/g, ""), meaning: d.meaning.trim(), date: $("#wDate").value || Util.today(), createdAt: old ? old.createdAt : Date.now(), order: old ? old.order : base + i + 1 };
     });
     try {
       await DB.saveWords(list);
