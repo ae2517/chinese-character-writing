@@ -54,7 +54,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue); outl
 .radios { display: flex; flex-wrap: wrap; gap: 8px; }
 .radios label { border: 1px solid #c9d2dd; border-radius: 999px; padding: 7px 14px; cursor: pointer; background: #fff; display: inline-flex; gap: 6px; align-items: center; font-weight: 500; }
 .radios label:has(input:checked) { background: var(--brand-l); border-color: var(--brand); color: var(--brand-d); font-weight: 700; }
-.likert { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.likert { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .likert label { text-align: center; border: 1px solid #c9d2dd; border-radius: 10px; padding: 8px 0; cursor: pointer; background: #fff; font-weight: 700; }
 .likert label:has(input:checked) { background: var(--brand); color: #fff; border-color: var(--brand); }
 .likert input { display: none; }

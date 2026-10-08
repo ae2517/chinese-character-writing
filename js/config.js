@@ -24,5 +24,5 @@ window.APP_CONFIG = {
   // ④ 최종 점수 가중치 (합계 1.0)
   weights: { count: 0.25, order: 0.25, start: 0.20, shape: 0.30 },
 
-  consentVersion: "v2"
+  consentVersion: "v3"
 };

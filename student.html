@@ -42,13 +42,13 @@
     <div id="consentText" class="consent"></div>
     <div class="radios" style="margin-top:10px">
       <label><input type="radio" name="consent" value="yes" required> 동의합니다</label>
-      <label><input type="radio" name="consent" value="no"> 동의하지 않습니다 (학습은 가능, 데이터는 연구에 사용되지 않음)</label>
+      <label><input type="radio" name="consent" value="no"> 동의하지 않습니다</label>
     </div>
 
     <h3 style="margin-top:18px">계정 정보</h3>
     <div class="grid2">
-      <div><label class="f" for="suId">학습자 ID (학번 등, 영문/숫자/한글 2~30자)</label>
-        <input id="suId" type="text" autocapitalize="off" required></div>
+      <div><label class="f" for="suId">학습자 ID (영문/숫자/한글, 2~10자)</label>
+        <input id="suId" type="text" maxlength="10" autocapitalize="off" required></div>
       <div><label class="f" for="suPw">비밀번호 (4자 이상)</label>
         <input id="suPw" type="password" autocomplete="new-password" minlength="4" required></div>
     </div>
@@ -73,8 +73,6 @@
     <div class="radios">
       <label><input type="radio" name="gender" value="여" required> 여</label>
       <label><input type="radio" name="gender" value="남"> 남</label>
-      <label><input type="radio" name="gender" value="기타"> 기타</label>
-      <label><input type="radio" name="gender" value="응답하지 않음"> 응답하지 않음</label>
     </div>
 
     <div class="grid2">
@@ -94,10 +92,9 @@
     <div class="likert" id="likert">
       <label><input type="radio" name="fam" value="1" required>1</label><label><input type="radio" name="fam" value="2">2</label>
       <label><input type="radio" name="fam" value="3">3</label><label><input type="radio" name="fam" value="4">4</label>
-      <label><input type="radio" name="fam" value="5">5</label><label><input type="radio" name="fam" value="6">6</label>
-      <label><input type="radio" name="fam" value="7">7</label>
+      <label><input type="radio" name="fam" value="5">5</label>
     </div>
-    <div class="likert-ends"><span>1 = 전혀 친숙하지 않다</span><span>7 = 매우 친숙하다</span></div>
+    <div class="likert-ends"><span>1 = 전혀 친숙하지 않다</span><span>5 = 매우 친숙하다</span></div>
 
     <div id="suErr" class="err"></div>
     <button class="btn primary" style="width:100%;margin-top:14px" type="submit">가입하고 시작하기</button>

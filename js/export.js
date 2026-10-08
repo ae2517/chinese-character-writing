@@ -15,7 +15,7 @@ const Export = (() => {
       "되돌리기횟수": a.undoCount, "힌트횟수": a.hintCount,
       "획수점수": a.scoreCount, "획순점수": a.scoreOrder, "획시작위치점수": a.scoreStart, "자형점수": a.scoreShape, "최종점수": a.finalScore,
       "국적": s.nationality ?? "", "성별": s.gender ?? "", "전공": s.major ?? "", "학년": s.grade ?? "",
-      "중국어학습기간(개월)": s.chineseMonths ?? "", "한자학습기간(개월)": s.hanziMonths ?? "", "한자친숙도(1-7)": s.familiarity ?? "",
+      "중국어학습기간(개월)": s.chineseMonths ?? "", "한자학습기간(개월)": s.hanziMonths ?? "", "한자친숙도(1-5)": s.familiarity ?? "",
       "연구동의": s.consent === true ? "동의" : s.consent === false ? "비동의" : "",
       "시도ID": a.id
     };
@@ -83,7 +83,7 @@ const Export = (() => {
       ["소요시간(초)", "첫 획을 쓰기 시작한 순간부터 '채점' 버튼을 누를 때까지"],
       ["첫획까지시간(초)", "쓰기 화면이 열린 후 첫 획을 쓰기 시작할 때까지(생각 시간)"],
       ["채점 관대함", `leniency = ${APP_CONFIG.leniency} (config.js)`],
-      ["한자친숙도", "자기평가 1(전혀 친숙하지 않다)~7(매우 친숙하다)"],
+      ["한자친숙도", "자기평가 1(전혀 친숙하지 않다)~5(매우 친숙하다)"],
       ["연구동의", "동의 / 비동의 — 연구 분석에는 '동의'만 사용하세요."]
     ];
   };
@@ -103,7 +103,7 @@ const Export = (() => {
     if (strokeDocs) { const sr = strokeRows(attempts, strokeDocs); add("획별_상세", sr.length ? sr : [{ 안내: "데이터 없음" }]); }
     const stu = students.map(s => ({
       "학습자ID": s.id, "국적": s.nationality, "성별": s.gender, "전공": s.major, "학년": s.grade,
-      "중국어학습기간(개월)": s.chineseMonths, "한자학습기간(개월)": s.hanziMonths, "한자친숙도(1-7)": s.familiarity,
+      "중국어학습기간(개월)": s.chineseMonths, "한자학습기간(개월)": s.hanziMonths, "한자친숙도(1-5)": s.familiarity,
       "연구동의": s.consent ? "동의" : "비동의", "동의일시": s.consentAt, "동의서버전": s.consentVersion, "가입일": s.createdDate
     }));
     add("학습자_정보", stu.length ? stu : [{ 안내: "데이터 없음" }]);

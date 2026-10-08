@@ -18,6 +18,7 @@ service cloud.firestore {
       allow get: if true;
       allow create: if request.resource.data.id == sid
                     && sid != 'guest'
+                    && sid.size() <= 10
                     && request.resource.data.passHash is string;
       allow list, update, delete: if isProf();
     }
