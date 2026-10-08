@@ -223,7 +223,7 @@
     $("#dataStat").innerHTML = `<div><span class="muted small">시도 수</span><b>${rows.length}</b></div><div><span class="muted small">학습자</span><b>${stu.size}</b></div>
       <div><span class="muted small">단어</span><b>${words.size}</b></div><div><span class="muted small">평균 최종점수</span><b>${mean(r => r.finalScore)}</b></div>
       <div><span class="muted small">평균 소요시간(초)</span><b>${mean(r => r.durationSec)}</b></div>`;
-    const cols = ["필기", "학습자ID", "학습날짜", "과", "학습단어", "연습유형", "연습횟수", "획수오류", "획순오류", "획시작위치오류", "자형오류", "소요시간(초)", "획수점수", "획순점수", "획시작위치점수", "자형점수", "최종점수"];
+    const cols = ["필기", "학습자ID", "학습날짜", "과", "학습단어", "연습유형", "연습횟수", "획수오류", "획순오류", "획시작위치오류", "자형오류", "소요시간(초)", "획순다시보기횟수", "다음획힌트횟수", "획수점수", "획순점수", "획시작위치점수", "자형점수", "최종점수"];
     const t = $("#dataTbl");
     t.innerHTML = "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr>";
     rows.slice(0, 300).forEach(a => {
@@ -307,11 +307,11 @@
     const m = (arr, f) => Util.round1(Util.mean(arr.map(f)));
     const stats = rounds.map(r => { const a = by.get(r); return {
       r, n: a.length, time: m(a, x => x.durationSec), c: m(a, x => x.scoreCount), o: m(a, x => x.scoreOrder), s: m(a, x => x.scoreStart), f: m(a, x => x.scoreShape), fin: m(a, x => x.finalScore),
-      ce: m(a, x => x.countErr), oe: m(a, x => x.orderErr), se: m(a, x => x.startErr), fe: m(a, x => x.formErr) }; });
+      rp: m(a, x => x.replayCount || 0), hn: m(a, x => x.hintCount || 0), ce: m(a, x => x.countErr), oe: m(a, x => x.orderErr), se: m(a, x => x.startErr), fe: m(a, x => x.formErr) }; });
 
     const t = $("#statTbl");
-    t.innerHTML = "<tr><th>연습횟수</th><th>시도 수</th><th>소요시간(초)</th><th>획수 점수</th><th>획순 점수</th><th>시작위치 점수</th><th>자형 점수</th><th>최종 점수</th><th>획수 오류</th><th>획순 오류</th><th>시작위치 오류</th><th>자형 오류</th></tr>" +
-      stats.map(s => `<tr><td>${s.r === 0 ? "따라쓰기" : s.r + "회차"}</td><td>${s.n}</td><td>${s.time}</td><td>${s.c}</td><td>${s.o}</td><td>${s.s}</td><td>${s.f}</td><td><b>${s.fin}</b></td><td>${s.ce}</td><td>${s.oe}</td><td>${s.se}</td><td>${s.fe}</td></tr>`).join("");
+    t.innerHTML = "<tr><th>연습횟수</th><th>시도 수</th><th>소요시간(초)</th><th>획수 점수</th><th>획순 점수</th><th>시작위치 점수</th><th>자형 점수</th><th>최종 점수</th><th>획수 오류</th><th>획순 오류</th><th>시작위치 오류</th><th>자형 오류</th><th>획순 다시 보기</th><th>다음 획 힌트</th></tr>" +
+      stats.map(s => `<tr><td>${s.r === 0 ? "따라쓰기" : s.r + "회차"}</td><td>${s.n}</td><td>${s.time}</td><td>${s.c}</td><td>${s.o}</td><td>${s.s}</td><td>${s.f}</td><td><b>${s.fin}</b></td><td>${s.ce}</td><td>${s.oe}</td><td>${s.se}</td><td>${s.fe}</td><td>${s.rp}</td><td>${s.hn}</td></tr>`).join("");
     if (!stats.length) t.innerHTML = '<tr><td class="muted">해당 조건의 데이터가 없어요.</td></tr>';
 
     const labels = stats.map(s => s.r === 0 ? "따라쓰기" : s.r + "회차");

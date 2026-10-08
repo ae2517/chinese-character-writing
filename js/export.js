@@ -12,7 +12,7 @@ const Export = (() => {
       "자형오류_모양": a.formShapeErr, "자형오류_위치": a.formPosErr, "자형오류_크기": a.formSizeErr,
       "소요시간(초)": a.durationSec, "첫획까지시간(초)": a.thinkSec,
       "정답획수": a.expectedStrokes, "쓴획수": a.drawnStrokes, "빠진획수": a.missingStrokes, "초과획수": a.extraStrokes,
-      "되돌리기횟수": a.undoCount, "힌트횟수": a.hintCount,
+      "되돌리기횟수": a.undoCount, "획순다시보기횟수": a.replayCount ?? "", "다음획힌트횟수": a.hintCount,
       "획수점수": a.scoreCount, "획순점수": a.scoreOrder, "획시작위치점수": a.scoreStart, "자형점수": a.scoreShape, "최종점수": a.finalScore,
       "국적": s.nationality ?? "", "성별": s.gender ?? "", "전공": s.major ?? "", "학년": s.grade ?? "",
       "중국어학습기간(개월)": s.chineseMonths ?? "", "한자학습기간(개월)": s.hanziMonths ?? "", "한자친숙도(1-5)": s.familiarity ?? "",
@@ -32,7 +32,7 @@ const Export = (() => {
     return [...g.entries()].map(([k, arr]) => ({
       "과": arr[0].lesson, "학습단어": arr[0].word, "연습유형": modeKo(arr[0].mode), "연습횟수": arr[0].round, "시도수(N)": arr.length,
       "평균소요시간(초)": m(arr, a => a.durationSec),
-      "평균획수오류": m(arr, a => a.countErr), "평균획순오류": m(arr, a => a.orderErr),
+      "평균획순다시보기횟수": m(arr, a => a.replayCount || 0), "평균다음획힌트횟수": m(arr, a => a.hintCount || 0), "평균획수오류": m(arr, a => a.countErr), "평균획순오류": m(arr, a => a.orderErr),
       "평균획시작위치오류": m(arr, a => a.startErr), "평균자형오류": m(arr, a => a.formErr),
       "평균획수점수": m(arr, a => a.scoreCount), "평균획순점수": m(arr, a => a.scoreOrder),
       "평균획시작위치점수": m(arr, a => a.scoreStart), "평균자형점수": m(arr, a => a.scoreShape), "평균최종점수": m(arr, a => a.finalScore)
@@ -81,6 +81,8 @@ const Export = (() => {
       ["획시작위치점수", "100 × (1 − 획시작위치오류 / 정답 총획수)"],
       ["자형점수", "각 획의 자형 유사도(모양 50% + 위치 25% + 크기 25%)의 평균. 못 쓴 획은 0점으로 계산"],
       ["최종점수", `획수 ${W.count} + 획순 ${W.order} + 획시작위치 ${W.start} + 자형 ${W.shape} 가중 평균 (시도마다 계산)`],
+      ["획순다시보기횟수", "따라쓰기 화면에서 '▶ 획순 다시 보기'를 눌러 애니메이션을 다시 본 횟수(처음 자동 재생과 '건너뛰기'는 제외). 빈칸쓰기에서는 이 버튼이 없어 0. 이 기능 추가 전 기록은 빈칸."],
+      ["다음획힌트횟수", "'💡 다음 획 힌트'를 눌러 다음 획의 애니메이션을 본 횟수"],
       ["소요시간(초)", "첫 획을 쓰기 시작한 순간부터 '채점' 버튼을 누를 때까지"],
       ["첫획까지시간(초)", "쓰기 화면이 열린 후 첫 획을 쓰기 시작할 때까지(생각 시간)"],
       ["채점 관대함", `leniency = ${APP_CONFIG.leniency} (config.js)`],

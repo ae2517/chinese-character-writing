@@ -307,7 +307,7 @@
     const boxes = $("#boxes");
     boxes.innerHTML = "";
     boxes.style.setProperty("--rows", Math.min(st.chars.length, window.innerWidth >= 700 ? 4 : 2));
-    R = { mode, token, ents: [], events: [], log: [], cur: 0, undo: 0, hints: 0, firstPen: null, enabledAt: null, submitted: false, busy: false, skip: false };
+    R = { mode, token, ents: [], events: [], log: [], cur: 0, undo: 0, hints: 0, replays: 0, firstPen: null, enabledAt: null, submitted: false, busy: false, skip: false };
     st.chars.forEach((c, i) => {
       const wrap = document.createElement("div");
       wrap.className = "boxwrap";
@@ -350,7 +350,8 @@
   }
   async function replayDemo() {
     if (!R) return;
-    if (R.busy) { R.skip = true; R.ents.forEach(e => e.box.stop()); return; }
+    if (R.busy) { R.skip = true; R.ents.forEach(e => e.box.stop()); return; }      // 재생 중 누르면 건너뛰기(횟수에 넣지 않음)
+    R.replays++;                                                                   // 획순 다시 보기
     const token = R.token;
     await playDemo(token);
     if (R && R.token === token) { R.busy = false; refreshBoxes(); setFb("", "이어서 따라 써 보세요 ✍️", ""); }
@@ -550,7 +551,7 @@
       formErr, formShapeErr: ev.filter(e => e.shp || e.unm).length, formPosErr: cnt("pos"), formSizeErr: cnt("siz"),
       durationSec: Util.round1(((R.firstPen ? now - R.firstPen : 0)) / 1000),
       thinkSec: Util.round1(((R.firstPen && R.enabledAt ? R.firstPen - R.enabledAt : 0)) / 1000),
-      expectedStrokes: S, drawnStrokes: total, undoCount: R.undo, hintCount: R.hints,
+      expectedStrokes: S, drawnStrokes: total, undoCount: R.undo, hintCount: R.hints, replayCount: R.replays,
       scoreCount: Util.round1(sc.count), scoreOrder: Util.round1(sc.order), scoreStart: Util.round1(sc.start), scoreShape: Util.round1(sc.shape),
       finalScore: Util.round1(final), leniency: CFG.leniency
     };
@@ -589,7 +590,7 @@
     if (a.countErr) tips.push(`획수가 정답(${a.expectedStrokes}획)과 달랐어요. 빠뜨리거나 더 쓴 획이 없는지 확인하세요.`);
     box.innerHTML = `
       <h2>${a.mode === "trace" ? "따라쓰기 결과" : `빈칸쓰기 ${a.round}회차 결과`}</h2>
-      <div class="row" style="align-items:flex-end"><div class="bigscore">${a.finalScore}<span style="font-size:1.2rem">점</span></div><div>${delta}<div class="muted small">소요 시간 ${a.durationSec}초 · 되돌리기 ${a.undoCount}회 · 힌트 ${a.hintCount}회</div></div></div>
+      <div class="row" style="align-items:flex-end"><div class="bigscore">${a.finalScore}<span style="font-size:1.2rem">점</span></div><div>${delta}<div class="muted small">소요 시간 ${a.durationSec}초 · 되돌리기 ${a.undoCount}회 · 획순 다시 보기 ${a.replayCount || 0}회 · 다음 획 힌트 ${a.hintCount}회</div></div></div>
       <div class="bars">${bar("획수", a.scoreCount)}${bar("획순", a.scoreOrder)}${bar("시작 위치", a.scoreStart)}${bar("자형", a.scoreShape)}</div>
       <div>${pills}</div>
       ${logs.length ? `<details open style="margin-top:10px"><summary><b>틀린 부분</b></summary><ul>${logs.map(l => `<li class="small">${Util.esc(l)}</li>`).join("")}</ul></details>` : `<p><b>🎉 모든 획이 정확했어요!</b></p>`}
