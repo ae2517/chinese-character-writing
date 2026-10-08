@@ -104,60 +104,18 @@ class CharBox {
     CharBox.installScrollLock();
   }
 
-  /** 쓰기 칸을 터치하는 동안 화면이 스크롤되지 않게 고정 (삼성 인터넷/크롬/사파리 공통)
-   *  1) touchstart/touchmove 를 문서 수준에서 먼저 가로채 기본 동작(스크롤)을 취소
-   *  2) 터치 중에는 페이지를 position:fixed 로 고정해, 브라우저가 스크롤을 시도해도 움직일 곳이 없게 함 */
+  /** 쓰기 칸에서 시작한 터치는 스크롤/당겨서 새로고침으로 쓰이지 않게 막음 (문서 수준, 비수동 리스너).
+   *  쓰기 칸 밖에서 시작한 터치는 그대로 스크롤됩니다. */
   static installScrollLock() {
     if (CharBox._lockInstalled) return;
     CharBox._lockInstalled = true;
-    let y = 0, touching = false;
+    let inside = false;
     const inBoxes = e => e.target && e.target.closest && e.target.closest(".boxes");
-    const lock = () => {
-      if (touching) return;
-      touching = true; y = window.scrollY;
-      const b = document.body.style;
-      b.position = "fixed"; b.top = -y + "px"; b.left = "0"; b.right = "0"; b.width = "100%";
-    };
-    const unlock = () => {
-      if (!touching) return;
-      touching = false;
-      const b = document.body.style;
-      b.position = ""; b.top = ""; b.left = ""; b.right = ""; b.width = "";
-      window.scrollTo(0, y);
-    };
-    document.addEventListener("touchstart", e => {
-      if (inBoxes(e)) { e.preventDefault(); lock(); }
-    }, { passive: false, capture: true });
-    document.addEventListener("touchmove", e => { if (touching) e.preventDefault(); }, { passive: false, capture: true });
-    ["touchend", "touchcancel"].forEach(t => document.addEventListener(t, e => {
-      if (!e.touches || e.touches.length === 0) unlock();      // 손가락이 모두 떨어지면 해제
-    }, { capture: true }));
-    window.addEventListener("blur", unlock);
-    CharBox.installSessionLock(inBoxes);
+    document.addEventListener("touchstart", e => { inside = !!inBoxes(e); if (inside) e.preventDefault(); }, { passive: false, capture: true });
+    document.addEventListener("touchmove", e => { if (inside) e.preventDefault(); }, { passive: false, capture: true });
+    ["touchend", "touchcancel"].forEach(t => document.addEventListener(t, e => { if (!e.touches || !e.touches.length) inside = false; }, { capture: true }));
   }
-
-  /** 쓰기 세션 고정: 첫 획을 쓴 순간부터 '다 썼어요(채점)'까지, 쓰기 칸 밖을 직접 스크롤하는 경우가 아니면
-   *  어떤 이유로든(레이아웃 변화·주소창 변화·브라우저 자동 스크롤) 화면 위치가 바뀌면 원래 위치로 되돌립니다. */
-  static installSessionLock(inBoxes) {
-    let userScroll = false, timer = null;
-    const allow = ms => { userScroll = true; clearTimeout(timer); timer = setTimeout(() => { userScroll = false; CharBox._lockY = window.scrollY; }, ms); };
-    document.addEventListener("touchstart", e => { if (!inBoxes(e)) { userScroll = true; clearTimeout(timer); } }, { passive: true, capture: true });
-    ["touchend", "touchcancel"].forEach(t => document.addEventListener(t, e => {
-      if (userScroll && (!e.touches || !e.touches.length)) allow(900);          // 손을 뗀 뒤 관성 스크롤까지 허용
-    }, { passive: true, capture: true }));
-    document.addEventListener("wheel", e => { if (!inBoxes(e)) allow(400); }, { passive: true, capture: true });
-    document.addEventListener("keydown", e => { if (/^(PageUp|PageDown|Home|End|ArrowUp|ArrowDown| )$/.test(e.key)) allow(600); }, { capture: true });
-    window.addEventListener("scroll", () => {
-      if (!CharBox.sessionLocked) return;
-      if (userScroll) { CharBox._lockY = window.scrollY; return; }
-      if (Math.abs(window.scrollY - CharBox._lockY) > 1) window.scrollTo(0, CharBox._lockY);
-    }, { passive: true });
-  }
-  static setSessionLock(on) {
-    CharBox.sessionLocked = !!on;
-    CharBox._lockY = window.scrollY;
-    document.documentElement.classList.toggle("writing-lock", !!on);
-  }
+  static setSessionLock() { /* 화면 위치는 sticky 레이아웃이 담당 */ }
 
   static pathD(p) {
     if (p.length === 1) return `M${p[0][0]} ${p[0][1]}l0.1 0`;

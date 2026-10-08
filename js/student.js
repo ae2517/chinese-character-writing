@@ -10,9 +10,22 @@
   try { DB.init(); } catch (e) { alert(e.message); }
   if (DB.demo) $("#demoBanner").classList.remove("hidden");
   renderConsent();
+  if (/[?&]debug\b/.test(location.search)) installDebug();      // 진단 모드: 주소 끝에 ?debug
   bindAuth();
   restoreSession();
   window.addEventListener("online", () => DB.flushPending().then(updateSync));
+
+  function installDebug() {
+    const box = document.createElement("div"); box.className = "dbg"; document.body.appendChild(box);
+    const lines = [];
+    const log = m => { lines.push(((performance.now() / 1000).toFixed(1)) + "s " + m); if (lines.length > 40) lines.shift(); box.textContent = lines.join("\n"); box.scrollTop = box.scrollHeight; };
+    log("debug on | ua=" + navigator.userAgent.slice(-70));
+    let last = window.scrollY;
+    window.addEventListener("scroll", () => { const d = Math.round(window.scrollY - last); log("scroll y=" + Math.round(window.scrollY) + " (" + (d >= 0 ? "+" : "") + d + ")"); last = window.scrollY; }, { passive: true });
+    window.addEventListener("resize", () => log("resize " + innerWidth + "x" + innerHeight));
+    ["pointerdown", "pointercancel", "pointerup"].forEach(t => document.addEventListener(t, e => log(t + " " + (e.target.closest && e.target.closest(".boxes") ? "box" : "outside")), { capture: true, passive: true }));
+    ["touchstart", "touchend"].forEach(t => document.addEventListener(t, e => log(t + " prevented=" + e.defaultPrevented), { passive: true }));
+  }
 
   function show(id) {
     ["viewAuth", "viewHome", "viewPractice"].forEach(v => $("#" + v).classList.toggle("hidden", v !== id));
@@ -275,7 +288,7 @@
     const token = tokenSeq;
     const w = st.word;
     $$(".stagebtn").forEach(b => b.classList.toggle("on", b.dataset.mode === mode));
-    $("#result").classList.add("hidden");
+    $("#result").classList.add("hidden"); $("#writeZone").classList.remove("unstick");
     $("#whHz").textContent = mode === "trace" ? w.word : "□".repeat(st.chars.length);
     const boxes = $("#boxes");
     boxes.innerHTML = "";
@@ -287,10 +300,11 @@
       boxes.appendChild(wrap);
       const box = new CharBox(wrap, c.data);
       box.setGray(mode === "trace");
-      box.onStart = () => { if (!R.firstPen) { R.firstPen = performance.now(); startTimer(); CharBox.setSessionLock(true); } };
+      box.onStart = () => { if (!R.firstPen) { R.firstPen = performance.now(); startTimer(); } };
       box.onStroke = (pts, path) => onStroke(i, pts, path);
       R.ents.push({ ch: c.ch, data: c.data, box, E: c.data.strokes.length, canvas: [] });
     });
+    $("#writeZone").scrollIntoView({ block: "start", behavior: "auto" });
     $("#btnReplay").classList.toggle("hidden", mode !== "trace");
     $("#btnHint").classList.toggle("hidden", false);
     $("#timer").textContent = "⏱ 0.0초";
@@ -484,7 +498,7 @@
     if (!R || R.submitted || R.busy) return;
     const total = R.ents.reduce((s, e) => s + e.canvas.length, 0);
     if (!total) { Util.toast("먼저 한 획이라도 써 보세요.", "warn"); return; }
-    R.submitted = true; stopTimer(); CharBox.setSessionLock(false);
+    R.submitted = true; stopTimer(); $("#writeZone").classList.add("unstick");
     const now = performance.now();
     const S = R.ents.reduce((s, e) => s + e.E, 0);
     const missing = R.ents.reduce((s, e) => s + Math.max(0, e.E - e.canvas.length), 0);
