@@ -267,9 +267,22 @@
   $("#btnNextChar").onclick = () => { if (R && R.cur < R.ents.length - 1) { R.cur++; refreshBoxes(); } };
   $("#btnSubmit").onclick = submit;
 
+  /** 지금 과의 단어 목록(화면에 보이는 순서)에서 현재 단어의 다음 단어 */
+  function nextWordOf(w) {
+    const list = st.words.filter(x => x.lesson === w.lesson).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const i = list.findIndex(x => x.id === w.id);
+    return i >= 0 && i < list.length - 1 ? list[i + 1] : null;
+  }
+  $("#btnNextWord").onclick = () => {
+    const n = st.word && nextWordOf(st.word);
+    if (!n) { Util.toast("이 과의 마지막 단어예요. 단어 목록에서 다른 단어를 골라 보세요.", "warn"); return; }
+    openWord(n);
+  };
+
   async function openWord(w) {
     abortRound();
     st.word = w;
+    $("#btnNextWord").disabled = !nextWordOf(w);       // 마지막 단어면 비활성
     show("viewPractice");
     $("#whHz").textContent = ""; $("#whPy").textContent = w.pinyin; $("#whKo").textContent = w.meaning;
     $("#wbPy").textContent = w.pinyin; $("#wbKo").textContent = w.meaning;
