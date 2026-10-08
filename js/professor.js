@@ -199,17 +199,23 @@
 
   /* ============ ② 학습 데이터 ============ */
   function buildDataFilters() {
-    const prev = $("#dSort") ? $("#dSort").value : "recent";
+    const pw = $("#dSortWord") ? $("#dSortWord").value : "none", pr = $("#dSortRound") ? $("#dSortRound").value : "recent";
     filterBlock("d", $("#dataFilters"), renderData, true, "");
-    mkSelect("dSort", "정렬", [["recent", "최근 시도순"], ["roundAsc", "연습횟수 오름차순 (1→5회차)"], ["roundDesc", "연습횟수 내림차순 (5→1회차)"]], $("#dataFilters"), renderData, prev);
+    mkSelect("dSortWord", "정렬 ① 학습단어", [["none", "사용 안 함"], ["asc", "단어 오름차순 (병음 순)"], ["desc", "단어 내림차순"]], $("#dataFilters"), renderData, pw);
+    mkSelect("dSortRound", "정렬 ② 연습횟수 (같은 단어 안에서)", [["recent", "최근 시도순"], ["asc", "연습횟수 오름차순 (1→5회차)"], ["desc", "연습횟수 내림차순 (5→1회차)"]], $("#dataFilters"), renderData, pr);
   }
 
   function renderData() {
-    const sort = ($("#dSort") || {}).value || "recent";
-    const rows = applyFilters(readFilters("d")).sort((a, b) => {
-      if (sort === "recent") return b.ts - a.ts;
-      const d = sort === "roundAsc" ? a.round - b.round : b.round - a.round;   // 연습횟수 (따라쓰기=0)
-      return d || Util.nat(a.studentId, b.studentId) || Util.nat(a.word, b.word) || a.ts - b.ts;
+    const sw = ($("#dSortWord") || {}).value || "none", sr = ($("#dSortRound") || {}).value || "recent";
+    const wordCmp = (x, y) => x.word.localeCompare(y.word, "zh-CN");              // 중국어 병음 순
+    const rows = applyFilters(readFilters("d")).sort((x, y) => {
+      if (sw !== "none") {
+        const c = wordCmp(x, y);
+        if (c) return sw === "asc" ? c : -c;
+      }
+      if (sr === "recent") return y.ts - x.ts;
+      const d = sr === "asc" ? x.round - y.round : y.round - x.round;               // 연습횟수 (따라쓰기=0)
+      return d || Util.nat(x.studentId, y.studentId) || x.ts - y.ts;
     });
     P.rows = rows;
     const stu = new Set(rows.map(r => r.studentId)), words = new Set(rows.map(r => r.wordId));
