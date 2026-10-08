@@ -17,30 +17,35 @@ service cloud.firestore {
     match /students/{sid} {
       allow get: if true;
       allow create: if request.resource.data.id == sid
+                    && sid != 'guest'
                     && request.resource.data.passHash is string;
       allow list, update, delete: if isProf();
     }
 
     // 연습 진행(회차 수): 기기를 바꿔도 이어서 세기 위한 카운터 (삭제 불가)
     match /progress/{pid} {
-      allow read, create, update: if true;
+      allow read: if true;
+      allow create, update: if request.resource.data.studentId != 'guest';
       allow delete: if isProf();
     }
 
     // 로그인 기록: 학생은 쓰기만, 읽기는 교수만
     match /logins/{lid} {
-      allow create: if request.resource.data.studentId is string;
+      allow create: if request.resource.data.studentId is string
+                    && request.resource.data.studentId != 'guest';
       allow read, update, delete: if isProf();
     }
 
     // 학습 기록: 학생은 '새로 쓰기'만 가능, 읽기·수정·삭제는 교수만
     match /attempts/{aid} {
       allow create: if request.resource.data.studentId is string
+                    && request.resource.data.studentId != 'guest'
                     && request.resource.data.id == aid;
       allow read, update, delete: if isProf();
     }
     match /attemptStrokes/{aid} {
-      allow create: if request.resource.data.id == aid;
+      allow create: if request.resource.data.id == aid
+                    && request.resource.data.studentId != 'guest';
       allow read, update, delete: if isProf();
     }
   }

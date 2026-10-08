@@ -13,13 +13,8 @@ window.APP_CONFIG = {
     appId: "1:26719573465:web:e8274e6716645eb79cf5c8"
   },
 
-  // ② 연구/수업 정보 (동의서 문구에 들어갑니다)
-  course: {
-    title: "간화자 쓰기 연습",
-    researcher: "○○대학교 ○○○ 교수",
-    contact: "your-email@example.com",
-    retention: "연구 종료 후 3년"
-  },
+  // ② 게스트(체험용) 계정 — 이 계정의 학습은 서버(데이터)에 저장되지 않습니다
+  guest: { id: "guest", password: "guest1234" },
 
   // ③ 학습 설정
   targetRounds: 5,        // 단어당 권장 빈칸쓰기 반복 횟수
@@ -29,5 +24,5 @@ window.APP_CONFIG = {
   // ④ 최종 점수 가중치 (합계 1.0)
   weights: { count: 0.25, order: 0.25, start: 0.20, shape: 0.30 },
 
-  consentVersion: "v1"
+  consentVersion: "v2"
 };

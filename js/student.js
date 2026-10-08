@@ -21,14 +21,15 @@
 
   /* ============ 인증 ============ */
   function renderConsent() {
-    const c = CFG.course;
     $("#consentText").innerHTML = `
-      <p><b>연구 제목:</b> 반복 쓰기 연습 과정에서의 한자(간화자) 획순·획수·자형 정확도 변화 분석</p>
-      <p><b>연구자:</b> ${Util.esc(c.researcher)} (문의: ${Util.esc(c.contact)})</p>
-      <p><b>연구 목적:</b> 이 앱은 중국어 단어 학습을 돕고, 반복 쓰기 연습에서 학습자의 쓰기 정확도가 어떻게 변하는지를 연구하기 위해 사용됩니다.</p>
-      <p><b>수집 정보:</b> (1) 가입 정보 – 학습자 ID, 국적, 성별, 전공, 학년, 중국어·한자 학습 기간, 한자 친숙도 / (2) 학습 기록 – 학습 날짜, 학습 단어, 연습 횟수, 획수·획순·시작 위치·자형 오류, 시도별 소요 시간, 점수. 쓴 글씨 이미지는 저장하지 않으며, 획의 위치·모양 판정 결과만 저장됩니다.</p>
-      <p><b>이용 및 보관:</b> 수집된 정보는 연구 및 수업 개선 목적으로만 사용되며, 학술 발표 시 개인을 식별할 수 없는 통계 형태로만 제시됩니다. 보관 기간: ${Util.esc(c.retention)}.</p>
-      <p><b>자발적 참여:</b> 참여는 자발적이며, 동의하지 않아도 학습 기능은 동일하게 이용할 수 있고 성적 등에 어떠한 불이익도 없습니다. 동의하지 않으면 귀하의 데이터는 연구 분석에서 제외됩니다. 언제든지 연구자에게 요청하여 동의를 철회하고 데이터 삭제를 요청할 수 있습니다.</p>`;
+      <h4>연구 참여 및 개인정보 수집·이용 안내</h4>
+      <p><b>1. 연구자</b><br>전북대학교 중국·아시아연구소 학술연구교수 윤애경 (문의: 2517ae@hanmail.net)</p>
+      <p><b>2. 연구 목적</b><br>본 연구는 간화자 학습 앱을 활용하여, 오류 확인과 반복 쓰기 연습 과정에서 학습자의 간화자 쓰기 정확도가 어떻게 변화하는지 분석하고, 그 결과를 수업 개선에 활용하는 것을 목적으로 합니다.</p>
+      <p><b>3. 수집하는 개인정보 항목</b><br>가입 정보: 학습자 ID, 국적, 성별, 전공, 학년, 중국어·한자 학습 기간, 한자 친숙도<br>학습 기록: 학습 날짜, 학습 단어, 연습 횟수, 시도별 소요 시간, 획수·획순·시작 위치·자형 오류 및 점수</p>
+      <p><b>4. 개인정보 이용 목적 및 결과 공개</b><br>수집된 개인정보는 본 연구의 분석 및 수업 개선 목적으로만 이용합니다. 학술논문 등으로 연구 결과를 발표할 때는 개인을 식별할 수 없는 통계 형태로 제시합니다.</p>
+      <p><b>5. 개인정보 보유·이용 기간 및 파기</b><br>수집된 개인정보는 수집일부터 연구 종료 후 3년까지 보관하며, 보관 기간이 끝나면 복구할 수 없는 방법으로 파기합니다.</p>
+      <p><b>6. 자발적 참여 및 동의 거부에 관한 안내</b><br>연구 참여는 자발적이며, 성적이나 평가 등에 어떠한 불이익도 없습니다.</p>
+      <p><b>7. 동의 철회 및 개인정보 삭제 요청</b><br>연구 참여에 동의한 후에도 위 문의처를 통해 언제든지 동의를 철회하거나 개인정보 삭제를 요청할 수 있습니다. 철회하더라도 성적이나 평가 등에 불이익이 없습니다.<br>다만, 개인과의 연결이 불가능한 익명 통계로 집계되었거나 이미 발표된 연구 결과에서는 해당 자료를 개별적으로 찾아 제거하기 어려울 수 있습니다. 법령에 따라 보관해야 하는 연구 동의서 등은 법정 보관 기간 동안 보관될 수 있습니다.</p>`;
   }
 
   function bindAuth() {
@@ -43,6 +44,13 @@
       e.preventDefault();
       const id = $("#lgId").value.trim().toLowerCase(), pw = $("#lgPw").value;
       $("#lgErr").textContent = "";
+      const G = CFG.guest;
+      if (id === G.id) {                                   // 게스트: 서버에 아무것도 저장하지 않음
+        if (pw !== G.password) { $("#lgErr").textContent = "게스트 비밀번호가 맞지 않아요."; return; }
+        localStorage.setItem("hz_session", JSON.stringify({ id, guest: true }));
+        enter({ id, guest: true }, "guest");
+        return;
+      }
       try {
         const s = await DB.getStudent(id);
         if (!s) { $("#lgErr").textContent = "등록되지 않은 ID예요. 'ID'를 확인하거나 회원가입을 해 주세요."; return; }
@@ -61,6 +69,7 @@
       const err = $("#suErr"); err.textContent = "";
       const f = e.target;
       const id = $("#suId").value.trim().toLowerCase(), pw = $("#suPw").value;
+      if (id === CFG.guest.id) { err.textContent = "이 ID는 체험용으로 예약되어 있어요. 다른 ID를 써 주세요."; return; }
       if (!/^[a-z0-9가-힣_-]{2,30}$/.test(id)) { err.textContent = "ID는 영문/숫자/한글/_/- 로 2~30자여야 해요."; return; }
       if (pw.length < 4) { err.textContent = "비밀번호는 4자 이상이어야 해요."; return; }
       const consent = f.consent.value;
@@ -100,6 +109,7 @@
     try {
       const ses = JSON.parse(localStorage.getItem("hz_session") || "null");
       if (!ses) return;
+      if (ses.guest) { enter({ id: ses.id, guest: true }, "guest"); return; }
       const s = await DB.getStudent(ses.id);
       if (s && s.passHash === ses.h) enter(s, "auto");
     } catch (e) { /* 로그인 화면 유지 */ }
@@ -108,10 +118,11 @@
   /* ============ 홈 ============ */
   async function enter(s, how) {
     st.user = s;
-    DB.addLogin(s.id, how || "login");        // 로그인 기록
-    $("#who").textContent = "ID: " + s.id;
+    if (!s.guest) DB.addLogin(s.id, how || "login");        // 로그인 기록 (게스트 제외)
+    $("#guestBanner").classList.toggle("hidden", !s.guest);
+    $("#who").textContent = s.guest ? "게스트 체험" : "ID: " + s.id;
     $("#who").classList.remove("hidden"); $("#btnLogout").classList.remove("hidden");
-    DB.flushPending().then(updateSync);
+    if (!s.guest) DB.flushPending().then(updateSync);
     show("viewHome");
     await loadProg();
     await loadWords();
@@ -123,12 +134,13 @@
   function saveProg(p, wordId) {
     st.progCache = p;
     localStorage.setItem("hz_prog_" + st.user.id, JSON.stringify(p));
+    if (st.user.guest) return;                // 게스트는 서버에 저장하지 않음
     DB.saveProgress(st.user.id, wordId, p[wordId]).catch(e => console.warn("진행 저장 지연", e));
   }
   async function loadProg() {
     const mine = localProg();
     let remote = {};
-    try { remote = await DB.getProgress(st.user.id); } catch (e) { console.warn(e); }
+    try { if (!st.user.guest) remote = await DB.getProgress(st.user.id); } catch (e) { console.warn(e); }
     const out = Object.assign({}, remote);
     Object.keys(mine).forEach(k => { if (!out[k] || (mine[k].total || 0) > (out[k].total || 0)) out[k] = mine[k]; });
     st.progCache = out;
@@ -480,6 +492,7 @@
     renderResult(att, prev);
     TTS.speak(w.word);
 
+    if (st.user.guest) { $("#saveState").textContent = "👀 게스트 체험 모드라서 기록은 저장되지 않아요."; return; }
     DB.addAttempt(att, strokes).then(ok => {
       $("#saveState").textContent = ok ? "✔ 기록이 저장되었어요." : "⚠️ 저장 대기 중 (인터넷에 연결되면 자동 저장)";
       updateSync();

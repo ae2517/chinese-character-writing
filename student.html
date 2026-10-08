@@ -14,6 +14,7 @@
   <button id="btnLogout" class="btn sm hidden">로그아웃</button>
 </div></div>
 
+<div id="guestBanner" class="demo-banner hidden">👀 게스트 체험 모드: 학습 기록이 저장되지 않으며 연구 데이터에 포함되지 않습니다.</div>
 <main class="wrap">
 
 <!-- 로그인 / 가입 -->
@@ -30,6 +31,7 @@
     <label class="f" for="lgPw">비밀번호</label>
     <input id="lgPw" type="password" autocomplete="current-password" required>
     <div id="lgErr" class="err"></div>
+    <p class="small muted">앱만 체험해 보려면 ID <b>guest</b> / 비밀번호 <b>guest1234</b> 로 로그인하세요. (기록 저장 안 됨)</p>
     <p class="small muted">비밀번호를 여러 번 틀려도 계정이 잠기지 않아요. 비밀번호를 잊었다면 교수님께 초기화를 요청하세요.</p>
     <button class="btn primary" style="width:100%" type="submit">로그인</button>
   </form>
