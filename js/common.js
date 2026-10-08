@@ -92,7 +92,13 @@ const TTS = {
     } catch (e) { this.unlocked = false; }
   },
   speak(text, rate) {
+    const mode = (window.APP_CONFIG && APP_CONFIG.ttsMode) || "auto";
+    if (mode === "online") return this.speakAudio(text);          // 폰·PC 모두 항상 인터넷 음성
     this.pick();
+    if (mode === "device" && !(this.supported && this.voice)) {
+      Util.toast("이 기기에 중국어 음성이 없어요.", "warn");
+      return false;
+    }
     if (this.supported && this.voice) {
       speechSynthesis.cancel();
       setTimeout(() => {
