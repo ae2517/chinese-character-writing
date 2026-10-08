@@ -61,41 +61,75 @@ const Util = {
   }
 };
 
-/* 발음 재생 (Web Speech API) */
+/* 발음 재생
+ *  1) 기기에 중국어 음성이 있으면 브라우저 음성(Web Speech API) 사용
+ *  2) 없거나(특히 스마트폰·인앱 브라우저) 지원되지 않으면 오디오 파일(TTS 웹 서비스)로 대체 재생
+ *  스마트폰은 사용자가 화면을 처음 터치할 때 소리 재생을 '해제'해 두어야 이후 자동 재생이 됩니다. */
+const SILENT = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
 const TTS = {
   voice: null,
   supported: "speechSynthesis" in window,
+  audio: null,
+  unlocked: false,
   pick() {
     if (!this.supported) return;
-    const vs = speechSynthesis.getVoices();
-    this.voice = vs.find(v => /zh[-_]CN/i.test(v.lang)) || vs.find(v => /^zh/i.test(v.lang)) || null;
+    const vs = speechSynthesis.getVoices() || [];
+    this.voice = vs.find(v => /zh[-_]CN|cmn.*CN/i.test(v.lang)) || vs.find(v => /^zh|^cmn/i.test(v.lang)) || null;
   },
   init() {
-    if (!this.supported) return;
-    this.pick();
-    speechSynthesis.onvoiceschanged = () => this.pick();
+    try { this.audio = new Audio(); this.audio.preload = "auto"; } catch (e) { this.audio = null; }
+    if (this.supported) { this.pick(); speechSynthesis.onvoiceschanged = () => this.pick(); }
+    const unlock = () => this.unlock();
+    ["pointerdown", "touchstart", "click", "keydown"].forEach(ev => window.addEventListener(ev, unlock, { once: false, passive: true }));
+  },
+  /** 첫 터치 때 소리 재생 권한을 얻어 둠 (iOS/안드로이드 자동재생 제한 대응) */
+  unlock() {
+    if (this.unlocked) return;
+    this.unlocked = true;
+    try {
+      if (this.audio) { this.audio.src = SILENT; const p = this.audio.play(); if (p && p.catch) p.catch(() => { this.unlocked = false; }); }
+      if (this.supported) speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+    } catch (e) { this.unlocked = false; }
   },
   speak(text, rate) {
-    if (!this.supported) {
-      Util.toast("이 브라우저는 발음 재생을 지원하지 않아요.", "warn");
-      return false;
-    }
-    speechSynthesis.cancel();
-    setTimeout(() => {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "zh-CN";
-      if (this.voice) u.voice = this.voice;
-      u.rate = rate || (window.APP_CONFIG && APP_CONFIG.ttsRate) || 0.8;
-      speechSynthesis.speak(u);
-    }, 60);
-    if (!this.voice && !this._warned) {
-      this._warned = true;
-      // 음성 목록이 늦게 올 수 있으므로 한 번만 안내
+    this.pick();
+    if (this.supported && this.voice) {
+      speechSynthesis.cancel();
       setTimeout(() => {
-        this.pick();
-        if (!this.voice) Util.toast("중국어 음성을 찾지 못했어요. 기기 설정에서 중국어 음성(TTS)을 설치해 주세요.", "warn");
-      }, 1500);
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "zh-CN"; u.voice = this.voice;
+        u.rate = rate || (window.APP_CONFIG && APP_CONFIG.ttsRate) || 0.8;
+        speechSynthesis.speak(u);
+      }, 60);
+      return true;
     }
+    return this.speakAudio(text);
+  },
+  speakAudio(text) {
+    if (!this.audio) { Util.toast("이 기기에서는 발음을 재생할 수 없어요.", "warn"); return false; }
+    const q = encodeURIComponent(text);
+    const urls = [
+      "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=zh-CN&q=" + q,
+      "https://fanyi.baidu.com/gettts?lan=zh&text=" + q + "&spd=5&source=web",
+      "https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=zh-CN&q=" + q
+    ];
+    const a = this.audio, token = (this._tok = (this._tok || 0) + 1);
+    let i = 0;
+    const next = () => {
+      if (token !== this._tok) return;
+      if (i >= urls.length) {
+        // 마지막 수단: 음성이 없어도 브라우저 음성 시도
+        if (this.supported) { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = "zh-CN"; speechSynthesis.speak(u); }
+        else Util.toast("발음을 재생하지 못했어요. 인터넷 연결을 확인해 주세요.", "warn");
+        return;
+      }
+      a.onerror = next;
+      a.src = urls[i++];
+      a.playbackRate = 0.9;
+      const p = a.play();
+      if (p && p.catch) p.catch(err => { if (err && err.name === "NotAllowedError") { Util.toast("🔊 버튼을 눌러 발음을 들어 보세요.", "warn"); } else next(); });
+    };
+    next();
     return true;
   }
 };

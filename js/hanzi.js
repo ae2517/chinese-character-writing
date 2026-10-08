@@ -79,7 +79,7 @@ class CharBox {
       this.pts = [pt(e)];
       this.live = S("path", { class: "u-live" }, this.userG);
       this.live.setAttribute("d", CharBox.pathD(this.pts));
-      this.drawing = true;
+      this.drawing = true; CharBox.drawingNow = true;
       if (this.onStart) this.onStart();
     });
     svg.addEventListener("pointermove", e => {
@@ -92,7 +92,7 @@ class CharBox {
     });
     const end = e => {
       if (!this.drawing) return;
-      this.drawing = false;
+      this.drawing = false; CharBox.drawingNow = false;
       const pts = this.pts, path = this.live;
       this.live = null;
       if (e.type === "pointercancel") { path.remove(); return; }
@@ -101,6 +101,14 @@ class CharBox {
     svg.addEventListener("pointerup", end);
     svg.addEventListener("pointercancel", end);
     svg.addEventListener("contextmenu", e => e.preventDefault());
+    // 터치 스크롤/당겨서 새로고침을 막음 (쓰기 칸 위에서는 화면이 움직이지 않게)
+    const stop = e => { if (this.enabled || this.drawing) e.preventDefault(); };
+    svg.addEventListener("touchstart", stop, { passive: false });
+    svg.addEventListener("touchmove", stop, { passive: false });
+    if (!CharBox._docLock) {
+      CharBox._docLock = true;
+      document.addEventListener("touchmove", e => { if (CharBox.drawingNow) e.preventDefault(); }, { passive: false });
+    }
   }
 
   static pathD(p) {

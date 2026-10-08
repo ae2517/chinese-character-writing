@@ -96,7 +96,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue); outl
 .stagebtn.on { background: var(--blue); color: #fff; border-color: var(--blue); }
 .boxes { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 6px 0 10px; --rows: 1; }
 .boxwrap { width: min(300px, calc((100vw - 76px) / var(--rows) - 10px)); aspect-ratio: 1; }
-.cbox { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; border-radius: 6px; cursor: crosshair; }
+.boxes, .boxwrap { touch-action: none; overscroll-behavior: contain; }
+.cbox { width: 100%; height: 100%; display: block; touch-action: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; border-radius: 6px; cursor: crosshair; }
 .cb-bg { fill: #fff; }
 .cb-border { fill: none; stroke: #b8c2ce; stroke-width: 6; }
 .cb-dash { stroke: #c5ced9; stroke-width: 4; stroke-dasharray: 22 18; }
@@ -113,7 +114,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue); outl
 .mk-ring { fill: none; stroke: #1f9d55; stroke-width: 10; } .mk-dot { fill: #1f9d55; }
 .tools { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
 .timer { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--sub); }
-.fb { border-radius: 12px; padding: 12px 14px; border: 1px solid var(--line); background: #fff; min-height: 76px; }
+.fb { border-radius: 12px; padding: 12px 14px; border: 1px solid var(--line); background: #fff; min-height: 150px; }   /* 높이를 고정에 가깝게 해서 쓰는 중 화면이 밀리지 않게 */
 .fb.ok { background: var(--ok-l); border-color: #b9e4c8; } .fb.warn { background: var(--warn-l); border-color: #f1d28c; } .fb.bad { background: var(--bad-l); border-color: #f4bcbc; }
 .fb .t { font-weight: 800; margin-bottom: 2px; }
 .fb ul { margin: 4px 0 0; padding-left: 1.1em; } .fb li { margin: 2px 0; }
@@ -148,3 +149,5 @@ table.t td input { min-height: 36px; padding: 6px 8px; min-width: 120px; }
 .modal { position: fixed; inset: 0; background: rgba(15,23,42,.55); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .modal-in { background: #fff; border-radius: 14px; padding: 16px; max-width: 960px; width: 100%; max-height: 92vh; overflow: auto; }
 .inkview svg { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+
+html, body { overscroll-behavior-y: contain; }

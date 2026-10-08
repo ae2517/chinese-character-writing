@@ -130,9 +130,9 @@ const Eval = (() => {
 
     // 획 하나의 자형 유사도(0~100): 모양 50% + 위치 25% + 크기 25%
     const q = res.sizeRatio >= 1 ? 1 / res.sizeRatio : res.sizeRatio;
-    const sShape = clamp01(1 - res.shapeDist / 200);
-    const sPos = clamp01(1 - res.posDist / 300);
-    const sSize = clamp01(q);
+    const sShape = clamp01(1 - res.shapeDist / (200 * Lz));
+    const sPos = clamp01(1 - res.posDist / (300 * Lz));
+    const sSize = clamp01((q + (Lz - 1) * 0.4) / (1 + (Lz - 1) * 0.4));
     res.sim = 100 * (0.5 * sShape + 0.25 * sPos + 0.25 * sSize);
     res.expStart = pick.E[0];
     return res;
