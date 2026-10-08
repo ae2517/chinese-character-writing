@@ -263,6 +263,7 @@
   }
 
   function abortRound() {
+    CharBox.setSessionLock(false);
     tokenSeq++; stopTimer();
     if (R) R.ents.forEach(e => e.box.stop());
     R = null;
@@ -286,7 +287,7 @@
       boxes.appendChild(wrap);
       const box = new CharBox(wrap, c.data);
       box.setGray(mode === "trace");
-      box.onStart = () => { if (!R.firstPen) { R.firstPen = performance.now(); startTimer(); } };
+      box.onStart = () => { if (!R.firstPen) { R.firstPen = performance.now(); startTimer(); CharBox.setSessionLock(true); } };
       box.onStroke = (pts, path) => onStroke(i, pts, path);
       R.ents.push({ ch: c.ch, data: c.data, box, E: c.data.strokes.length, canvas: [] });
     });
@@ -483,7 +484,7 @@
     if (!R || R.submitted || R.busy) return;
     const total = R.ents.reduce((s, e) => s + e.canvas.length, 0);
     if (!total) { Util.toast("먼저 한 획이라도 써 보세요.", "warn"); return; }
-    R.submitted = true; stopTimer();
+    R.submitted = true; stopTimer(); CharBox.setSessionLock(false);
     const now = performance.now();
     const S = R.ents.reduce((s, e) => s + e.E, 0);
     const missing = R.ents.reduce((s, e) => s + Math.max(0, e.E - e.canvas.length), 0);

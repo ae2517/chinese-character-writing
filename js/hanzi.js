@@ -133,6 +133,30 @@ class CharBox {
       if (!e.touches || e.touches.length === 0) unlock();      // 손가락이 모두 떨어지면 해제
     }, { capture: true }));
     window.addEventListener("blur", unlock);
+    CharBox.installSessionLock(inBoxes);
+  }
+
+  /** 쓰기 세션 고정: 첫 획을 쓴 순간부터 '다 썼어요(채점)'까지, 쓰기 칸 밖을 직접 스크롤하는 경우가 아니면
+   *  어떤 이유로든(레이아웃 변화·주소창 변화·브라우저 자동 스크롤) 화면 위치가 바뀌면 원래 위치로 되돌립니다. */
+  static installSessionLock(inBoxes) {
+    let userScroll = false, timer = null;
+    const allow = ms => { userScroll = true; clearTimeout(timer); timer = setTimeout(() => { userScroll = false; CharBox._lockY = window.scrollY; }, ms); };
+    document.addEventListener("touchstart", e => { if (!inBoxes(e)) { userScroll = true; clearTimeout(timer); } }, { passive: true, capture: true });
+    ["touchend", "touchcancel"].forEach(t => document.addEventListener(t, e => {
+      if (userScroll && (!e.touches || !e.touches.length)) allow(900);          // 손을 뗀 뒤 관성 스크롤까지 허용
+    }, { passive: true, capture: true }));
+    document.addEventListener("wheel", e => { if (!inBoxes(e)) allow(400); }, { passive: true, capture: true });
+    document.addEventListener("keydown", e => { if (/^(PageUp|PageDown|Home|End|ArrowUp|ArrowDown| )$/.test(e.key)) allow(600); }, { capture: true });
+    window.addEventListener("scroll", () => {
+      if (!CharBox.sessionLocked) return;
+      if (userScroll) { CharBox._lockY = window.scrollY; return; }
+      if (Math.abs(window.scrollY - CharBox._lockY) > 1) window.scrollTo(0, CharBox._lockY);
+    }, { passive: true });
+  }
+  static setSessionLock(on) {
+    CharBox.sessionLocked = !!on;
+    CharBox._lockY = window.scrollY;
+    document.documentElement.classList.toggle("writing-lock", !!on);
   }
 
   static pathD(p) {

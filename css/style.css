@@ -151,3 +151,6 @@ table.t td input { min-height: 36px; padding: 6px 8px; min-width: 120px; }
 .inkview svg { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
 
 html, body { overscroll-behavior-y: contain; }
+
+html.writing-lock, html.writing-lock body { overflow-anchor: none; scroll-behavior: auto; }
+body { overflow-anchor: none; }
