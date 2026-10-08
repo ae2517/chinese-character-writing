@@ -16,6 +16,19 @@ const Util = {
   nat(a, b) {
     return String(a).localeCompare(String(b), "ko", { numeric: true });
   },
+  /** 시도 목록에 유형별 회차(_mr)와 전체 회차(_ov)를 붙임. 저장된 값(modeRound, seq)이 있으면 그것을, 없으면(이전 기록) 시간순으로 계산 */
+  annotateRounds(list) {
+    const g = new Map();
+    list.slice().sort((a, b) => a.ts - b.ts).forEach(a => {
+      const k = a.studentId + "|" + a.wordId;
+      const n = g.get(k) || { trace: 0, blank: 0, all: 0 };
+      g.set(k, n);
+      n.all++; n[a.mode === "trace" ? "trace" : "blank"]++;
+      a._mr = a.modeRound != null ? a.modeRound : n[a.mode === "trace" ? "trace" : "blank"];
+      a._ov = a.seq != null ? a.seq : n.all;
+    });
+    return list;
+  },
   uid(p = "a") {
     return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   },

@@ -337,7 +337,9 @@
     $("#timer").textContent = "⏱ 0.0초";
     $("#dots").innerHTML = "";
     const P = prog()[w.id] || {};
-    $("#roundInfo").textContent = mode === "trace" ? "따라쓰기" : `빈칸쓰기 ${(P.blank || 0) + 1}회차 / 권장 ${CFG.targetRounds}회`;
+    $("#roundInfo").textContent = mode === "trace"
+      ? `따라쓰기 ${(P.trace || 0) + 1}회차 · 전체 ${(P.total || 0) + 1}번째`
+      : `빈칸쓰기 ${(P.blank || 0) + 1}회차 / 권장 ${CFG.targetRounds}회 · 전체 ${(P.total || 0) + 1}번째`;
     TTS.speak(w.word);                       // 쓸 때마다 발음 들려주기
     if (mode === "trace") await playDemo(token);
     if (!R || R.token !== token) return;
@@ -558,7 +560,7 @@
     const att = {
       id: Util.uid("a"), studentId: st.user.id, date: Util.today(), time: Util.clock(d), ts: d.getTime(),
       lesson: w.lesson, wordId: w.id, word: w.word, pinyin: w.pinyin, meaning: w.meaning,
-      mode: R.mode, round, seq: p.total,
+      mode: R.mode, round, modeRound: isBlank ? p.blank : p.trace, seq: p.total,
       countErr, missingStrokes: missing, extraStrokes: over,
       orderErr: ordErr, startErr,
       formErr, formShapeErr: ev.filter(e => e.shp || e.unm).length, formPosErr: cnt("pos"), formSizeErr: cnt("siz"),
@@ -602,7 +604,7 @@
     if (a.formErr) tips.push("자형은 모양·위치·크기를 함께 봐요. 칸의 십자선을 기준으로 글자 전체가 칸 안에 고르게 들어가게 써 보세요.");
     if (a.countErr) tips.push(`획수가 정답(${a.expectedStrokes}획)과 달랐어요. 빠뜨리거나 더 쓴 획이 없는지 확인하세요.`);
     box.innerHTML = `
-      <h2>${a.mode === "trace" ? "따라쓰기 결과" : `빈칸쓰기 ${a.round}회차 결과`}</h2>
+      <h2>${a.mode === "trace" ? "따라쓰기" : "빈칸쓰기"} ${a.modeRound}회차 결과 <span class="muted small" style="font-weight:500">(전체 ${a.seq}번째 연습)</span></h2>
       <div class="row" style="align-items:flex-end"><div class="bigscore">${a.finalScore}<span style="font-size:1.2rem">점</span></div><div>${delta}<div class="muted small">소요 시간 ${a.durationSec}초 · 되돌리기 ${a.undoCount}회 · 획순 다시 보기 ${a.replayCount || 0}회 · 다음 획 힌트 ${a.hintCount}회</div></div></div>
       <div class="bars">${bar("획수", a.scoreCount)}${bar("획순", a.scoreOrder)}${bar("시작 위치", a.scoreStart)}${bar("자형", a.scoreShape)}</div>
       <div>${pills}</div>

@@ -45,6 +45,7 @@
       console.error(e);
       Util.toast("데이터를 불러오지 못했어요: " + (e.code || e.message) + " (Firestore 규칙/교수 계정 확인)", "bad");
     }
+    Util.annotateRounds(P.attempts);
     P.stuMap = new Map(P.students.map(s => [s.id, s]));
     renderWordList(); buildDataFilters(); renderData(); buildStatFilters(); renderStudents();
   }
@@ -201,7 +202,7 @@
     const pw = $("#dSortWord") ? $("#dSortWord").value : "none", pr = $("#dSortRound") ? $("#dSortRound").value : "recent";
     filterBlock("d", $("#dataFilters"), renderData, true, "");
     mkSelect("dSortWord", "정렬 ① 학습단어", [["none", "사용 안 함"], ["asc", "단어 오름차순 (병음 순)"], ["desc", "단어 내림차순"]], $("#dataFilters"), renderData, pw);
-    mkSelect("dSortRound", "정렬 ② 연습횟수 (같은 단어 안에서)", [["recent", "최근 시도순"], ["asc", "연습횟수 오름차순 (1→5회차)"], ["desc", "연습횟수 내림차순 (5→1회차)"]], $("#dataFilters"), renderData, pr);
+    mkSelect("dSortRound", "정렬 ② 연습횟수 (같은 단어 안에서)", [["recent", "최근 시도순"], ["allAsc", "전체 연습회차 오름차순"], ["allDesc", "전체 연습회차 내림차순"], ["typeAsc", "유형별 연습횟수 오름차순 (따라쓰기→빈칸쓰기)"], ["typeDesc", "유형별 연습횟수 내림차순 (빈칸쓰기→따라쓰기)"]], $("#dataFilters"), renderData, pr);
   }
 
   function renderData() {
@@ -213,7 +214,12 @@
         if (c) return sw === "asc" ? c : -c;
       }
       if (sr === "recent") return y.ts - x.ts;
-      const d = sr === "asc" ? x.round - y.round : y.round - x.round;               // 연습횟수 (따라쓰기=0)
+      const modeIdx = a => (a.mode === "trace" ? 0 : 1);
+      let d;
+      if (sr === "allAsc") d = x._ov - y._ov;
+      else if (sr === "allDesc") d = y._ov - x._ov;
+      else if (sr === "typeAsc") d = modeIdx(x) - modeIdx(y) || x._mr - y._mr;      // 따라쓰기 1,2,3… → 빈칸쓰기 1,2,3…
+      else d = modeIdx(y) - modeIdx(x) || y._mr - x._mr;                            // 빈칸쓰기 …3,2,1 → 따라쓰기 …3,2,1
       return d || Util.nat(x.studentId, y.studentId) || x.ts - y.ts;
     });
     P.rows = rows;
@@ -222,7 +228,7 @@
     $("#dataStat").innerHTML = `<div><span class="muted small">시도 수</span><b>${rows.length}</b></div><div><span class="muted small">학습자</span><b>${stu.size}</b></div>
       <div><span class="muted small">단어</span><b>${words.size}</b></div><div><span class="muted small">평균 최종점수</span><b>${mean(r => r.finalScore)}</b></div>
       <div><span class="muted small">평균 소요시간(초)</span><b>${mean(r => r.durationSec)}</b></div>`;
-    const cols = ["필기", "학습자ID", "학습날짜", "과", "학습단어", "연습유형", "연습횟수", "획순다시보기횟수", "다음획힌트횟수", "획수오류", "획순오류", "획시작위치오류", "자형오류", "소요시간(초)", "획수점수", "획순점수", "획시작위치점수", "자형점수", "최종점수"];
+    const cols = ["필기", "학습자ID", "학습날짜", "과", "학습단어", "연습유형", "연습횟수(유형별)", "전체연습회차", "획순다시보기횟수", "다음획힌트횟수", "획수오류", "획순오류", "획시작위치오류", "자형오류", "소요시간(초)", "획수점수", "획순점수", "획시작위치점수", "자형점수", "최종점수"];
     const t = $("#dataTbl");
     t.innerHTML = "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr>";
     rows.slice(0, 300).forEach(a => {
@@ -248,7 +254,7 @@
 
   /* ---- 필기 이미지 ---- */
   const inkOf = async id => { const docs = await DB.listStrokes(); return (docs.find(x => x.id === id) || {}).ink || null; };
-  const attLabel = a => a.studentId + " · " + a.date + " · " + a.word + " · " + (a.mode === "trace" ? "따라쓰기" : a.round + "회차") + " · " + a.finalScore + "점";
+  const attLabel = a => a.studentId + " · " + a.date + " · " + a.word + " · " + (a.mode === "trace" ? "따라쓰기 " : "빈칸쓰기 ") + a._mr + "회차(전체 " + a._ov + "번째) · " + a.finalScore + "점";
   let curInk = null;
 
   async function drawInk() {
@@ -270,7 +276,7 @@
   $("#inkClose").onclick = () => $("#inkModal").classList.add("hidden");
   $("#inkModal").onclick = e => { if (e.target.id === "inkModal") $("#inkModal").classList.add("hidden"); };
   $("#inkColor").onchange = $("#inkAnswer").onchange = () => curInk && drawInk();
-  const fname = a => [a.studentId, a.date, a.word, a.mode === "trace" ? "trace" : "r" + a.round, a.id.slice(-5)].join("_").replace(/[\\/:*?"<>|\s]/g, "");
+  const fname = a => [a.studentId, a.date, a.word, (a.mode === "trace" ? "trace" : "blank") + a._mr, "all" + a._ov, a.id.slice(-5)].join("_").replace(/[\\/:*?"<>|\s]/g, "");
   const save = (blob, name) => { const u = URL.createObjectURL(blob), el = document.createElement("a"); el.href = u; el.download = name; el.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); };
   $("#inkPng").onclick = async () => {
     if (!curInk) return;
@@ -302,19 +308,20 @@
   function renderStats() {
     const rows = applyFilters(readFilters("s"));
     const by = new Map();
-    rows.forEach(a => { if (!by.has(a.round)) by.set(a.round, []); by.get(a.round).push(a); });
-    const rounds = [...by.keys()].sort((a, b) => a - b);
+    rows.forEach(a => { const k = a.mode + ":" + a._mr; if (!by.has(k)) by.set(k, []); by.get(k).push(a); });
+    const lab = k => { const [mo, n] = k.split(":"); return (mo === "trace" ? "따라쓰기 " : "빈칸쓰기 ") + n + "회차"; };
+    const rounds = [...by.keys()].sort((a, b) => { const [ma, na] = a.split(":"), [mb, nb] = b.split(":"); return (ma === mb ? 0 : ma === "trace" ? -1 : 1) || na - nb; });
     const m = (arr, f) => Util.round1(Util.mean(arr.map(f)));
     const stats = rounds.map(r => { const a = by.get(r); return {
-      r, n: a.length, time: m(a, x => x.durationSec), c: m(a, x => x.scoreCount), o: m(a, x => x.scoreOrder), s: m(a, x => x.scoreStart), f: m(a, x => x.scoreShape), fin: m(a, x => x.finalScore),
+      r, lab: lab(r), n: a.length, time: m(a, x => x.durationSec), c: m(a, x => x.scoreCount), o: m(a, x => x.scoreOrder), s: m(a, x => x.scoreStart), f: m(a, x => x.scoreShape), fin: m(a, x => x.finalScore),
       rp: m(a, x => x.replayCount || 0), hn: m(a, x => x.hintCount || 0), ce: m(a, x => x.countErr), oe: m(a, x => x.orderErr), se: m(a, x => x.startErr), fe: m(a, x => x.formErr) }; });
 
     const t = $("#statTbl");
-    t.innerHTML = "<tr><th>연습횟수</th><th>시도 수</th><th>소요시간(초)</th><th>획수 점수</th><th>획순 점수</th><th>시작위치 점수</th><th>자형 점수</th><th>최종 점수</th><th>획수 오류</th><th>획순 오류</th><th>시작위치 오류</th><th>자형 오류</th><th>획순 다시 보기</th><th>다음 획 힌트</th></tr>" +
-      stats.map(s => `<tr><td>${s.r === 0 ? "따라쓰기" : s.r + "회차"}</td><td>${s.n}</td><td>${s.time}</td><td>${s.c}</td><td>${s.o}</td><td>${s.s}</td><td>${s.f}</td><td><b>${s.fin}</b></td><td>${s.ce}</td><td>${s.oe}</td><td>${s.se}</td><td>${s.fe}</td><td>${s.rp}</td><td>${s.hn}</td></tr>`).join("");
+    t.innerHTML = "<tr><th>연습유형·회차</th><th>시도 수</th><th>소요시간(초)</th><th>획수 점수</th><th>획순 점수</th><th>시작위치 점수</th><th>자형 점수</th><th>최종 점수</th><th>획수 오류</th><th>획순 오류</th><th>시작위치 오류</th><th>자형 오류</th><th>획순 다시 보기</th><th>다음 획 힌트</th></tr>" +
+      stats.map(s => `<tr><td>${s.lab}</td><td>${s.n}</td><td>${s.time}</td><td>${s.c}</td><td>${s.o}</td><td>${s.s}</td><td>${s.f}</td><td><b>${s.fin}</b></td><td>${s.ce}</td><td>${s.oe}</td><td>${s.se}</td><td>${s.fe}</td><td>${s.rp}</td><td>${s.hn}</td></tr>`).join("");
     if (!stats.length) t.innerHTML = '<tr><td class="muted">해당 조건의 데이터가 없어요.</td></tr>';
 
-    const labels = stats.map(s => s.r === 0 ? "따라쓰기" : s.r + "회차");
+    const labels = stats.map(s => s.lab);
     drawChart("chScore", "line", labels, [
       ["획수 점수", stats.map(s => s.c), "#2563eb"], ["획순 점수", stats.map(s => s.o), "#d98a00"],
       ["시작위치 점수", stats.map(s => s.s), "#1f9d55"], ["자형 점수", stats.map(s => s.f), "#8e44ad"], ["최종 점수", stats.map(s => s.fin), "#c0392b"]
@@ -328,7 +335,7 @@
     const pt = $("#perStudentTbl");
     pt.innerHTML = "<tr><th>학습자</th><th>단어</th><th>시도</th><th>최종점수</th><th>획수 점수</th><th>획순 점수</th><th>시작위치 점수</th><th>자형 점수</th><th>소요시간(초)</th></tr>";
     [...grp.values()].sort((a, b) => Util.nat(a[0].studentId, b[0].studentId) || Util.nat(a[0].word, b[0].word)).forEach(arr => {
-      arr.sort((a, b) => a.round - b.round || a.ts - b.ts);
+      arr.sort((a, b) => a._ov - b._ov || a.ts - b.ts);
       const f = arr[0], l = arr[arr.length - 1];
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${Util.esc(f.studentId)}</td><td>${Util.esc(f.word)}</td><td>${arr.length}</td><td>${fmt(f.finalScore, l.finalScore)}</td><td>${fmt(f.scoreCount, l.scoreCount)}</td><td>${fmt(f.scoreOrder, l.scoreOrder)}</td><td>${fmt(f.scoreStart, l.scoreStart)}</td><td>${fmt(f.scoreShape, l.scoreShape)}</td><td>${fmt(f.durationSec, l.durationSec)}</td>`;
