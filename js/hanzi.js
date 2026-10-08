@@ -101,14 +101,38 @@ class CharBox {
     svg.addEventListener("pointerup", end);
     svg.addEventListener("pointercancel", end);
     svg.addEventListener("contextmenu", e => e.preventDefault());
-    // 터치 스크롤/당겨서 새로고침을 막음 (쓰기 칸 위에서는 화면이 움직이지 않게)
-    const stop = e => { if (this.enabled || this.drawing) e.preventDefault(); };
-    svg.addEventListener("touchstart", stop, { passive: false });
-    svg.addEventListener("touchmove", stop, { passive: false });
-    if (!CharBox._docLock) {
-      CharBox._docLock = true;
-      document.addEventListener("touchmove", e => { if (CharBox.drawingNow) e.preventDefault(); }, { passive: false });
-    }
+    CharBox.installScrollLock();
+  }
+
+  /** 쓰기 칸을 터치하는 동안 화면이 스크롤되지 않게 고정 (삼성 인터넷/크롬/사파리 공통)
+   *  1) touchstart/touchmove 를 문서 수준에서 먼저 가로채 기본 동작(스크롤)을 취소
+   *  2) 터치 중에는 페이지를 position:fixed 로 고정해, 브라우저가 스크롤을 시도해도 움직일 곳이 없게 함 */
+  static installScrollLock() {
+    if (CharBox._lockInstalled) return;
+    CharBox._lockInstalled = true;
+    let y = 0, touching = false;
+    const inBoxes = e => e.target && e.target.closest && e.target.closest(".boxes");
+    const lock = () => {
+      if (touching) return;
+      touching = true; y = window.scrollY;
+      const b = document.body.style;
+      b.position = "fixed"; b.top = -y + "px"; b.left = "0"; b.right = "0"; b.width = "100%";
+    };
+    const unlock = () => {
+      if (!touching) return;
+      touching = false;
+      const b = document.body.style;
+      b.position = ""; b.top = ""; b.left = ""; b.right = ""; b.width = "";
+      window.scrollTo(0, y);
+    };
+    document.addEventListener("touchstart", e => {
+      if (inBoxes(e)) { e.preventDefault(); lock(); }
+    }, { passive: false, capture: true });
+    document.addEventListener("touchmove", e => { if (touching) e.preventDefault(); }, { passive: false, capture: true });
+    ["touchend", "touchcancel"].forEach(t => document.addEventListener(t, e => {
+      if (!e.touches || e.touches.length === 0) unlock();      // 손가락이 모두 떨어지면 해제
+    }, { capture: true }));
+    window.addEventListener("blur", unlock);
   }
 
   static pathD(p) {
