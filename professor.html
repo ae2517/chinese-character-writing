@@ -43,7 +43,6 @@
       <p class="muted small" style="margin-top:-6px">중국어 단어만 입력하면 한어병음과 한국어 뜻이 자동으로 채워집니다. (뜻은 자동 번역이므로 저장 전에 꼭 확인·수정하세요.)</p>
       <div class="grid3">
         <div><label class="f" for="wLesson">과(Lesson)</label><input id="wLesson" type="text" list="lessonList" placeholder="예: 3과" required><datalist id="lessonList"></datalist></div>
-        <div><label class="f" for="wDate">수업 날짜</label><input id="wDate" type="date"></div>
       </div>
       <label class="f" for="wInput">중국어 단어 (줄바꿈·쉼표·공백으로 여러 개 구분)</label>
       <textarea id="wInput" placeholder="学生&#10;老师&#10;图书馆"></textarea>
@@ -114,6 +113,7 @@
       <label><input type="checkbox" id="inkColor" checked> 오류 획 색 표시</label>
       <button id="inkPng" class="btn sm">⬇ PNG 저장</button>
     </div>
+    <div id="inkMeta" class="muted small" style="margin-bottom:6px"></div>
     <div id="inkView" class="inkview"></div>
   </div>
 </div>

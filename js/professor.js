@@ -35,7 +35,6 @@
 
   async function start() {
     if (started) return; started = true;
-    $("#wDate").value = Util.today();
     await loadAll();
   }
 
@@ -112,7 +111,7 @@
     const list = ok.map((d, i) => {
       const id = lesson.replace(/[\/\\#?[\]]/g, "-") + "__" + d.word;
       const old = P.words.find(w => w.id === id);
-      return { id, lesson, word: d.word, pinyin: d.pinyin.replace(/\s+/g, ""), meaning: d.meaning.trim(), date: $("#wDate").value || Util.today(), createdAt: old ? old.createdAt : Date.now(), order: old ? old.order : base + i + 1 };
+      return { id, lesson, word: d.word, pinyin: d.pinyin.replace(/\s+/g, ""), meaning: d.meaning.trim(), createdAt: old ? old.createdAt : Date.now(), order: old ? old.order : base + i + 1 };
     });
     try {
       await DB.saveWords(list);
@@ -131,11 +130,11 @@
       const h = document.createElement("h3"); h.textContent = l; box.appendChild(h);
       const wrap = document.createElement("div"); wrap.className = "tscroll"; wrap.style.maxHeight = "none";
       const t = document.createElement("table"); t.className = "t";
-      t.innerHTML = "<tr><th>단어</th><th>병음</th><th>뜻</th><th>수업일</th><th>학습 시도</th><th></th></tr>";
+      t.innerHTML = "<tr><th>단어</th><th>병음</th><th>뜻</th><th>학습 시도</th><th></th></tr>";
       P.words.filter(w => w.lesson === l).sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(w => {
         const n = P.attempts.filter(a => a.wordId === w.id).length;
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td style="font-family:var(--hanzi);font-size:1.2rem">${Util.esc(w.word)}</td><td>${Util.esc(w.pinyin)}</td><td>${Util.esc(w.meaning)}</td><td>${Util.esc(w.date || "")}</td><td>${n}</td>
+        tr.innerHTML = `<td style="font-family:var(--hanzi);font-size:1.2rem">${Util.esc(w.word)}</td><td>${Util.esc(w.pinyin)}</td><td>${Util.esc(w.meaning)}</td><td>${n}</td>
           <td><button class="btn sm">🔊</button> <button class="btn sm danger">삭제</button></td>`;
         const [b1, b2] = $$("button", tr);
         b1.onclick = () => TTS.speak(w.word);
@@ -223,13 +222,13 @@
     $("#dataStat").innerHTML = `<div><span class="muted small">시도 수</span><b>${rows.length}</b></div><div><span class="muted small">학습자</span><b>${stu.size}</b></div>
       <div><span class="muted small">단어</span><b>${words.size}</b></div><div><span class="muted small">평균 최종점수</span><b>${mean(r => r.finalScore)}</b></div>
       <div><span class="muted small">평균 소요시간(초)</span><b>${mean(r => r.durationSec)}</b></div>`;
-    const cols = ["필기", "학습자ID", "학습날짜", "과", "학습단어", "연습유형", "연습횟수", "획수오류", "획순오류", "획시작위치오류", "자형오류", "소요시간(초)", "획순다시보기횟수", "다음획힌트횟수", "획수점수", "획순점수", "획시작위치점수", "자형점수", "최종점수"];
+    const cols = ["필기", "학습자ID", "학습날짜", "과", "학습단어", "연습유형", "연습횟수", "획순다시보기횟수", "다음획힌트횟수", "획수오류", "획순오류", "획시작위치오류", "자형오류", "소요시간(초)", "획수점수", "획순점수", "획시작위치점수", "자형점수", "최종점수"];
     const t = $("#dataTbl");
     t.innerHTML = "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr>";
     rows.slice(0, 300).forEach(a => {
       const r = Export.attemptRow(a, P.stuMap.get(a.studentId));
       const tr = document.createElement("tr");
-      tr.innerHTML = cols.map(c => c === "필기" ? `<td><button class="btn sm">보기</button></td>` : `<td>${Util.esc(r[c])}</td>`).join("");
+      tr.innerHTML = cols.map(c => c === "필기" ? `<td><button class="btn sm">보기</button></td>` : `<td>${Util.esc(r[c] === "" || r[c] == null ? "-" : r[c])}</td>`).join("");
       $("button", tr).onclick = () => showInk(a);
       t.appendChild(tr);
     });
@@ -263,6 +262,7 @@
       if (!ink) { Util.toast("이 시도에는 저장된 필기 이미지가 없어요. (이전 버전에서 저장된 기록)", "warn"); return; }
       curInk = { a, ink };
       $("#inkTitle").textContent = attLabel(a);
+      $("#inkMeta").textContent = "획순 다시 보기 " + (a.replayCount ?? "-") + "회 · 다음 획 힌트 " + (a.hintCount ?? "-") + "회 · 되돌리기 " + (a.undoCount ?? "-") + "회 · 소요 " + a.durationSec + "초";
       $("#inkModal").classList.remove("hidden");
       await drawInk();
     } catch (e) { console.error(e); Util.toast("필기 이미지를 불러오지 못했어요.", "bad"); }
