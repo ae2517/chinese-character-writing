@@ -61,7 +61,8 @@
       const G = CFG.guest;
       if (id === G.id) {                                   // 게스트: 서버에 아무것도 저장하지 않음
         if (pw !== G.password) { $("#lgErr").textContent = "게스트 비밀번호가 맞지 않아요."; return; }
-        localStorage.setItem("hz_session", JSON.stringify({ id, guest: true }));
+        resetGuest();                                      // 들어올 때마다 처음 상태로
+        sessionStorage.setItem("hz_guest", "1");
         enter({ id, guest: true }, "guest");
         return;
       }
@@ -117,6 +118,7 @@
     };
     $("#btnLogout").onclick = () => {
       localStorage.removeItem("hz_session");
+      resetGuest();
       st.user = null; stopTimer();
       $("#who").classList.add("hidden"); $("#btnLogout").classList.add("hidden");
       show("viewAuth");
@@ -160,11 +162,19 @@
     };
   }
 
+  /** 게스트 체험 상태(연습 진행, 세션)를 모두 지움 */
+  function resetGuest() {
+    localStorage.removeItem("hz_prog_" + CFG.guest.id);
+    sessionStorage.removeItem("hz_guest");
+    st.progCache = null;
+  }
+
   async function restoreSession() {
     try {
+      if (sessionStorage.getItem("hz_guest")) { enter({ id: CFG.guest.id, guest: true }, "guest"); return; }   // 새로고침해도 이어서 체험
       const ses = JSON.parse(localStorage.getItem("hz_session") || "null");
       if (!ses) return;
-      if (ses.guest) { enter({ id: ses.id, guest: true }, "guest"); return; }
+      if (ses.guest) { localStorage.removeItem("hz_session"); return; }          // 예전 버전의 게스트 세션은 버림
       const s = await DB.getStudent(ses.id);
       if (s && s.passHash === ses.h) enter(s, "auto");
     } catch (e) { /* 로그인 화면 유지 */ }
