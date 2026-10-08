@@ -1,7 +1,7 @@
 /* 데이터 계층: Firebase(Firestore, npm 모듈러 SDK) 사용, 설정이 없으면 데모 모드(localStorage) */
 import { firebaseEnabled, db as fs, auth } from "./firebase.js";
 import {
-  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, query, where, orderBy
+  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, query, where, orderBy, serverTimestamp
 } from "firebase/firestore";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 
@@ -21,15 +21,52 @@ const DB = (() => {
     const d = await getDoc(doc(fs, "students", id));
     return d.exists() ? d.data() : null;
   }
-  async function createStudent(s) {
+  // 전화번호는 원문을 저장하지 않고 해시만 저장합니다.
+  //  students/{id}            : 공개 조회(로그인용) — 전화번호 정보 없음
+  //  studentPrivate/{id}      : 전화번호 해시 (교수 외 읽기 불가)
+  //  phoneIndex/{해시}         : 전화번호 → ID (아이디 찾기용, 해시를 알아야만 조회 가능)
+  async function createStudent(s, phoneHash) {
     if (demo) {
       const all = L.get("demo_students", {});
       if (all[s.id]) throw new Error("exists");
-      all[s.id] = s;
-      L.set("demo_students", all);
+      const idx = L.get("demo_phoneidx", {});
+      if (idx[phoneHash]) throw new Error("phone-exists");
+      all[s.id] = s; idx[phoneHash] = s.id;
+      L.set("demo_students", all); L.set("demo_phoneidx", idx);
+      const pr = L.get("demo_private", {}); pr[s.id] = phoneHash; L.set("demo_private", pr);
       return;
     }
-    await setDoc(doc(fs, "students", s.id), s); // 이미 있으면 규칙에서 거부됨
+    if ((await getDoc(doc(fs, "phoneIndex", phoneHash))).exists()) throw new Error("phone-exists");
+    const batch = writeBatch(fs);
+    batch.set(doc(fs, "students", s.id), s);             // 이미 있으면 규칙에서 거부됨
+    batch.set(doc(fs, "studentPrivate", s.id), { phoneHash });
+    batch.set(doc(fs, "phoneIndex", phoneHash), { studentId: s.id });
+    await batch.commit();
+  }
+  async function findIdByPhone(phoneHash) {
+    if (demo) return L.get("demo_phoneidx", {})[phoneHash] || null;
+    const x = await getDoc(doc(fs, "phoneIndex", phoneHash));
+    return x.exists() ? x.data().studentId : null;
+  }
+  /** 전화번호가 가입 때와 같으면 비밀번호를 바꿉니다. 맞으면 true, 틀리면 false */
+  async function resetPasswordByPhone(id, phoneHash, newPassHash) {
+    if (demo) {
+      const pr = L.get("demo_private", {});
+      if (!pr[id] || pr[id] !== phoneHash) return false;
+      const all = L.get("demo_students", {}); all[id].passHash = newPassHash; L.set("demo_students", all);
+      return true;
+    }
+    try {
+      const batch = writeBatch(fs);
+      // 같은 요청 안에서 '전화번호를 안다'는 증거(resetAt = 요청 시각)를 함께 써야 규칙이 비밀번호 변경을 허용
+      batch.update(doc(fs, "studentPrivate", id), { phoneHash, resetAt: serverTimestamp() });
+      batch.update(doc(fs, "students", id), { passHash: newPassHash });
+      await batch.commit();
+      return true;
+    } catch (e) {
+      if (e && (e.code === "permission-denied" || e.code === "not-found")) return false;
+      throw e;
+    }
   }
   async function listStudents() {
     if (demo) return Object.values(L.get("demo_students", {}));
@@ -180,7 +217,7 @@ const DB = (() => {
   }
 
   return {
-    demo, init, getStudent, createStudent, listStudents, updateStudent,
+    demo, init, getStudent, createStudent, findIdByPhone, resetPasswordByPhone, listStudents, updateStudent,
     listWords, saveWords, deleteWord,
     addAttempt, flushPending, pendingCount: () => pending().length,
     getProgress, saveProgress, addLogin, listLogins,

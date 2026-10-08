@@ -31,9 +31,35 @@
     <label class="f" for="lgPw">비밀번호</label>
     <input id="lgPw" type="password" autocomplete="current-password" required>
     <div id="lgErr" class="err"></div>
-    <p class="small muted">앱만 체험해 보려면 ID <b>guest</b> / 비밀번호 <b>guest1234</b> 로 로그인하세요. (기록 저장 안 됨)</p>
-    <p class="small muted">비밀번호를 여러 번 틀려도 계정이 잠기지 않아요. 비밀번호를 잊었다면 교수님께 초기화를 요청하세요.</p>
     <button class="btn primary" style="width:100%" type="submit">로그인</button>
+    <div class="row" style="justify-content:center;margin-top:10px">
+      <button type="button" class="btn sm ghost" data-rec="findId">아이디 찾기</button>
+      <button type="button" class="btn sm ghost" data-rec="resetPw">비밀번호 재설정</button>
+    </div>
+  </form>
+
+  <form id="formFindId" class="card hidden">
+    <h2>아이디 찾기</h2>
+    <p class="small muted">가입할 때 입력한 전화번호를 넣어 주세요.</p>
+    <label class="f" for="fiPhone">전화번호</label>
+    <input id="fiPhone" type="tel" inputmode="tel" placeholder="01012345678" required>
+    <div id="fiMsg" class="err"></div>
+    <div class="row" style="margin-top:12px"><button class="btn primary" type="submit">아이디 찾기</button>
+      <button type="button" class="btn" data-rec="back">로그인으로</button></div>
+  </form>
+
+  <form id="formResetPw" class="card hidden" autocomplete="off">
+    <h2>비밀번호 재설정</h2>
+    <p class="small muted">학습자 ID와 가입할 때 입력한 전화번호가 맞으면 새 비밀번호를 만들 수 있어요.</p>
+    <label class="f" for="rpId">학습자 ID</label>
+    <input id="rpId" type="text" autocapitalize="off" required>
+    <label class="f" for="rpPhone">전화번호</label>
+    <input id="rpPhone" type="tel" inputmode="tel" required>
+    <label class="f" for="rpPw">새 비밀번호 (4자 이상)</label>
+    <input id="rpPw" type="password" autocomplete="new-password" minlength="4" required>
+    <div id="rpMsg" class="err"></div>
+    <div class="row" style="margin-top:12px"><button class="btn primary" type="submit">비밀번호 바꾸기</button>
+      <button type="button" class="btn" data-rec="back">로그인으로</button></div>
   </form>
 
   <form id="formSignup" class="card hidden" autocomplete="off">
@@ -52,6 +78,9 @@
       <div><label class="f" for="suPw">비밀번호 (4자 이상)</label>
         <input id="suPw" type="password" autocomplete="new-password" minlength="4" required></div>
     </div>
+    <label class="f" for="suPhone">전화번호 (아이디·비밀번호 찾기용)</label>
+    <input id="suPhone" type="tel" inputmode="tel" placeholder="01012345678" required>
+    <p class="small muted" style="margin:4px 0 0">전화번호 원문은 저장하지 않고, 변환된 값(해시)만 저장해 본인 확인에만 사용합니다.</p>
 
     <h3 style="margin-top:18px">기본 정보</h3>
     <div class="grid3">

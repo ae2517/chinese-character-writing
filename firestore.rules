@@ -20,6 +20,34 @@ service cloud.firestore {
                     && sid != 'guest'
                     && sid.size() <= 10
                     && request.resource.data.passHash is string;
+      allow list, delete: if isProf();
+      // 비밀번호 재설정: 전화번호 해시를 아는 사람이 같은 요청 안에서 studentPrivate 의 resetAt 을 갱신했을 때만 passHash 변경 허용
+      allow update: if isProf() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['passHash'])
+        && getAfter(/databases/$(database)/documents/studentPrivate/$(sid)).data.resetAt == request.time
+      );
+    }
+
+    // 전화번호 해시(본인 확인용): 가입 때 생성만 가능, 읽기는 교수만
+    match /studentPrivate/{sid} {
+      allow create: if sid != 'guest'
+                    && request.resource.data.keys().hasOnly(['phoneHash'])
+                    && request.resource.data.phoneHash is string
+                    && existsAfter(/databases/$(database)/documents/students/$(sid));
+      // 본인 확인: 저장된 해시와 같은 값을 보내면서 resetAt 만 요청 시각으로 갱신
+      allow update: if isProf() || (
+        request.resource.data.phoneHash == resource.data.phoneHash
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resetAt'])
+        && request.resource.data.resetAt == request.time
+      );
+      allow read, delete: if isProf();
+    }
+
+    // 전화번호 → ID 색인(아이디 찾기): 해시를 알아야만 1건 조회 가능, 목록 조회 불가
+    match /phoneIndex/{h} {
+      allow get: if true;
+      allow create: if request.resource.data.keys().hasOnly(['studentId'])
+                    && existsAfter(/databases/$(database)/documents/students/$(request.resource.data.studentId));
       allow list, update, delete: if isProf();
     }
 

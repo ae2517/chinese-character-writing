@@ -25,7 +25,7 @@
       <h4>연구 참여 및 개인정보 수집·이용 안내</h4>
       <p><b>1. 연구자</b><br>전북대학교 중국·아시아연구소 학술연구교수 윤애경 (문의: 2517ae@hanmail.net)</p>
       <p><b>2. 연구 목적</b><br>본 연구는 간화자 학습 앱을 활용하여, 오류를 확인하고 반복 쓰기 연습 과정에서 학습자의 간화자 쓰기 정확도가 어떻게 변화하는지 분석하며, 그 결과를 수업 개선에 활용하는 것을 목적으로 합니다.</p>
-      <p><b>3. 수집하는 개인정보 항목</b><br>가입 정보: 학습자 ID, 국적, 성별, 전공, 학년, 중국어·한자 학습 기간, 한자 친숙도<br>학습 기록: 학습 날짜, 학습 단어, 연습 횟수, 시도별 소요 시간, 획수·획순·시작 위치·자형 오류 및 점수</p>
+      <p><b>3. 수집하는 개인정보 항목</b><br>가입 정보: 학습자 ID, 전화번호(ID·비밀번호 찾기용), 국적, 성별, 전공, 학년, 중국어·한자 학습 기간, 한자 친숙도<br>학습 기록: 학습 날짜, 학습 단어, 연습 횟수, 시도별 소요 시간, 획수·획순·시작 위치·자형 오류 및 점수</p>
       <p><b>4. 개인정보 이용 목적 및 결과 공개</b><br>수집된 개인정보는 본 연구의 분석 및 수업 개선 목적으로만 이용합니다. 학술논문 등으로 연구 결과를 발표할 때는 개인을 식별할 수 없는 통계 형태로 제시합니다.</p>
       <p><b>5. 개인정보 보유·이용 기간 및 파기</b><br>수집된 개인정보는 수집일부터 연구 종료 후 3년까지 보관하며, 보관 기간이 끝나면 복구할 수 없는 방법으로 파기합니다.</p>
       <p><b>6. 자발적 참여 및 동의 거부에 관한 안내</b><br>연구 참여는 자발적이며, 연구 참여 및 연구 목적의 개인정보 수집·이용에 동의하지 않아도 성적이나 평가 등에 어떠한 불이익도 없습니다.</p>
@@ -38,6 +38,7 @@
       $("#formLogin").classList.toggle("hidden", b.dataset.t !== "login");
       $("#formSignup").classList.toggle("hidden", b.dataset.t !== "signup");
     });
+    bindRecovery();
     $("#suNat").onchange = e => $("#suNatEtc").classList.toggle("hidden", e.target.value !== "기타");
 
     $("#formLogin").onsubmit = async e => {
@@ -76,6 +77,8 @@
       if (!consent) { err.textContent = "연구 참여 동의 여부를 선택해 주세요."; return; }
       let nat = $("#suNat").value;
       if (nat === "기타") nat = $("#suNatEtc").value.trim() || "기타";
+      const phone = normPhone($("#suPhone").value);
+      if (!phone) { err.textContent = "전화번호를 8~15자리 숫자로 입력해 주세요."; return; }
       const num = x => Math.max(0, parseInt($(x).value, 10) || 0);
       const s = {
         id, passHash: await Util.sha256(id + ":" + pw),
@@ -88,13 +91,15 @@
       if (!s.gender || !s.familiarity) { err.textContent = "성별과 한자 친숙도를 선택해 주세요."; return; }
       try {
         if (await DB.getStudent(id)) { err.textContent = "이미 사용 중인 ID예요. 다른 ID를 써 주세요."; return; }
-        await DB.createStudent(s);
+        await DB.createStudent(s, await phoneHash(phone));
         localStorage.setItem("hz_session", JSON.stringify({ id, h: s.passHash }));
         Util.toast("가입 완료! 환영해요 🎉", "ok");
         enter(s, "signup");
       } catch (ex) {
         console.error(ex);
-        err.textContent = "가입을 저장하지 못했어요. (이미 있는 ID이거나 네트워크 문제)";
+        err.textContent = ex && ex.message === "phone-exists"
+          ? "이 전화번호로 이미 가입된 ID가 있어요. 로그인 화면의 '아이디 찾기'를 이용해 주세요."
+          : "가입을 저장하지 못했어요. (이미 있는 ID이거나 네트워크 문제)";
       }
     };
     $("#btnLogout").onclick = () => {
@@ -102,6 +107,43 @@
       st.user = null; stopTimer();
       $("#who").classList.add("hidden"); $("#btnLogout").classList.add("hidden");
       show("viewAuth");
+    };
+  }
+
+  /* ---- 아이디 찾기 / 비밀번호 재설정 (전화번호) ---- */
+  function normPhone(v) { const d = String(v || "").replace(/\D/g, ""); return d.length >= 8 && d.length <= 15 ? d : ""; }
+  const phoneHash = p => Util.sha256("phone:" + p);
+
+  function bindRecovery() {
+    const panes = { login: "#formLogin", findId: "#formFindId", resetPw: "#formResetPw" };
+    const go = k => Object.entries(panes).forEach(([n, sel]) => $(sel).classList.toggle("hidden", n !== k));
+    $$("[data-rec]").forEach(b => b.onclick = () => { $("#fiMsg").textContent = ""; $("#rpMsg").textContent = ""; go(b.dataset.rec === "back" ? "login" : b.dataset.rec); });
+    $("#formFindId").onsubmit = async e => {
+      e.preventDefault();
+      const msg = $("#fiMsg"); msg.className = "err"; msg.textContent = "";
+      const p = normPhone($("#fiPhone").value);
+      if (!p) { msg.textContent = "전화번호를 8~15자리 숫자로 입력해 주세요."; return; }
+      try {
+        const id = await DB.findIdByPhone(await phoneHash(p));
+        if (!id) { msg.textContent = "이 전화번호로 가입된 ID가 없어요."; return; }
+        msg.className = "small"; msg.innerHTML = "가입된 학습자 ID: <b style=\"font-size:1.2rem\">" + Util.esc(id) + "</b>";
+        $("#lgId").value = id;
+      } catch (err) { console.error(err); msg.textContent = "조회하지 못했어요. 인터넷 연결을 확인해 주세요."; }
+    };
+    $("#formResetPw").onsubmit = async e => {
+      e.preventDefault();
+      const msg = $("#rpMsg"); msg.className = "err"; msg.textContent = "";
+      const id = $("#rpId").value.trim().toLowerCase(), pw = $("#rpPw").value, p = normPhone($("#rpPhone").value);
+      if (!p) { msg.textContent = "전화번호를 8~15자리 숫자로 입력해 주세요."; return; }
+      if (pw.length < 4) { msg.textContent = "새 비밀번호는 4자 이상이어야 해요."; return; }
+      if (id === CFG.guest.id) { msg.textContent = "게스트 계정은 재설정할 수 없어요."; return; }
+      try {
+        const ok = await DB.resetPasswordByPhone(id, await phoneHash(p), await Util.sha256(id + ":" + pw));
+        if (!ok) { msg.textContent = "ID 또는 전화번호가 가입 정보와 맞지 않아요."; return; }
+        Util.toast("비밀번호를 바꿨어요. 새 비밀번호로 로그인하세요.", "ok");
+        $("#lgId").value = id; $("#lgPw").value = ""; $("#rpPw").value = "";
+        go("login");
+      } catch (err) { console.error(err); msg.textContent = "처리하지 못했어요. 인터넷 연결을 확인해 주세요."; }
     };
   }
 
