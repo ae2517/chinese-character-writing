@@ -29,7 +29,9 @@
 
   function show(id) {
     ["viewAuth", "viewHome", "viewPractice"].forEach(v => $("#" + v).classList.toggle("hidden", v !== id));
+    document.documentElement.classList.toggle("practice", id === "viewPractice");
     window.scrollTo(0, 0);
+    const pv = $("#viewPractice"); if (pv) pv.scrollTop = 0;
   }
 
   /* ============ 인증 ============ */
@@ -256,6 +258,7 @@
   /* ============ 연습 ============ */
   $("#btnBack").onclick = () => { abortRound(); show("viewHome"); renderHome([...new Set(st.words.map(w => w.lesson))].sort(Util.nat)); };
   $("#btnSpeak").onclick = () => TTS.speak(st.word.word);
+  $("#btnSpeak2").onclick = () => TTS.speak(st.word.word);
   $$(".stagebtn").forEach(b => b.onclick = () => startRound(b.dataset.mode));
   $("#btnReplay").onclick = () => replayDemo();
   $("#btnUndo").onclick = undo;
@@ -269,6 +272,7 @@
     st.word = w;
     show("viewPractice");
     $("#whHz").textContent = ""; $("#whPy").textContent = w.pinyin; $("#whKo").textContent = w.meaning;
+    $("#wbPy").textContent = w.pinyin; $("#wbKo").textContent = w.meaning;
     $("#boxes").innerHTML = '<span class="muted">글자 데이터를 불러오는 중…</span>';
     $("#result").classList.add("hidden");
     const chars = [...w.word].filter(Hanzi.isHan);
