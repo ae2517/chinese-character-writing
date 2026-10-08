@@ -198,10 +198,19 @@
   }
 
   /* ============ ② 학습 데이터 ============ */
-  function buildDataFilters() { filterBlock("d", $("#dataFilters"), renderData, true, ""); }
+  function buildDataFilters() {
+    const prev = $("#dSort") ? $("#dSort").value : "recent";
+    filterBlock("d", $("#dataFilters"), renderData, true, "");
+    mkSelect("dSort", "정렬", [["recent", "최근 시도순"], ["roundAsc", "연습횟수 오름차순 (1→5회차)"], ["roundDesc", "연습횟수 내림차순 (5→1회차)"]], $("#dataFilters"), renderData, prev);
+  }
 
   function renderData() {
-    const rows = applyFilters(readFilters("d")).sort((a, b) => b.ts - a.ts);
+    const sort = ($("#dSort") || {}).value || "recent";
+    const rows = applyFilters(readFilters("d")).sort((a, b) => {
+      if (sort === "recent") return b.ts - a.ts;
+      const d = sort === "roundAsc" ? a.round - b.round : b.round - a.round;   // 연습횟수 (따라쓰기=0)
+      return d || Util.nat(a.studentId, b.studentId) || Util.nat(a.word, b.word) || a.ts - b.ts;
+    });
     P.rows = rows;
     const stu = new Set(rows.map(r => r.studentId)), words = new Set(rows.map(r => r.wordId));
     const mean = (f) => { const v = rows.map(f); return v.length ? Util.round1(v.reduce((s, x) => s + x, 0) / v.length) : "-"; };
