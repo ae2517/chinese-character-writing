@@ -208,13 +208,14 @@
     $("#dataStat").innerHTML = `<div><span class="muted small">시도 수</span><b>${rows.length}</b></div><div><span class="muted small">학습자</span><b>${stu.size}</b></div>
       <div><span class="muted small">단어</span><b>${words.size}</b></div><div><span class="muted small">평균 최종점수</span><b>${mean(r => r.finalScore)}</b></div>
       <div><span class="muted small">평균 소요시간(초)</span><b>${mean(r => r.durationSec)}</b></div>`;
-    const cols = ["학습자ID", "학습날짜", "과", "학습단어", "연습유형", "연습횟수", "획수오류", "획순오류", "획시작위치오류", "자형오류", "소요시간(초)", "획수점수", "획순점수", "획시작위치점수", "자형점수", "최종점수"];
+    const cols = ["필기", "학습자ID", "학습날짜", "과", "학습단어", "연습유형", "연습횟수", "획수오류", "획순오류", "획시작위치오류", "자형오류", "소요시간(초)", "획수점수", "획순점수", "획시작위치점수", "자형점수", "최종점수"];
     const t = $("#dataTbl");
     t.innerHTML = "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr>";
     rows.slice(0, 300).forEach(a => {
       const r = Export.attemptRow(a, P.stuMap.get(a.studentId));
       const tr = document.createElement("tr");
-      tr.innerHTML = cols.map(c => `<td>${Util.esc(r[c])}</td>`).join("");
+      tr.innerHTML = cols.map(c => c === "필기" ? `<td><button class="btn sm">보기</button></td>` : `<td>${Util.esc(r[c])}</td>`).join("");
+      $("button", tr).onclick = () => showInk(a);
       t.appendChild(tr);
     });
     $("#dataNote").textContent = rows.length > 300 ? `화면에는 최근 300건만 표시합니다. 엑셀 파일에는 모든 행(${rows.length}건)과 학습자 정보·획별 상세가 들어갑니다.` : "엑셀 파일에는 학습자 정보·회차별 요약·획별 상세·변수 설명 시트가 함께 들어갑니다.";
@@ -230,6 +231,55 @@
   }
   $("#btnXlsxAll").onclick = () => doExport(P.attempts, "전체");
   $("#btnXlsxFilt").onclick = () => doExport(P.rows, "필터결과");
+
+  /* ---- 필기 이미지 ---- */
+  const inkOf = async id => { const docs = await DB.listStrokes(); return (docs.find(x => x.id === id) || {}).ink || null; };
+  const attLabel = a => a.studentId + " · " + a.date + " · " + a.word + " · " + (a.mode === "trace" ? "따라쓰기" : a.round + "회차") + " · " + a.finalScore + "점";
+  let curInk = null;
+
+  async function drawInk() {
+    const out = await Ink.svg(curInk.ink, { color: $("#inkColor").checked, answer: $("#inkAnswer").checked });
+    curInk.out = out;
+    $("#inkView").innerHTML = out.markup;
+  }
+  async function showInk(a) {
+    try {
+      const ink = await inkOf(a.id);
+      if (!ink) { Util.toast("이 시도에는 저장된 필기 이미지가 없어요. (이전 버전에서 저장된 기록)", "warn"); return; }
+      curInk = { a, ink };
+      $("#inkTitle").textContent = attLabel(a);
+      $("#inkModal").classList.remove("hidden");
+      await drawInk();
+    } catch (e) { console.error(e); Util.toast("필기 이미지를 불러오지 못했어요.", "bad"); }
+  }
+  $("#inkClose").onclick = () => $("#inkModal").classList.add("hidden");
+  $("#inkModal").onclick = e => { if (e.target.id === "inkModal") $("#inkModal").classList.add("hidden"); };
+  $("#inkColor").onchange = $("#inkAnswer").onchange = () => curInk && drawInk();
+  const fname = a => [a.studentId, a.date, a.word, a.mode === "trace" ? "trace" : "r" + a.round, a.id.slice(-5)].join("_").replace(/[\\/:*?"<>|\s]/g, "");
+  const save = (blob, name) => { const u = URL.createObjectURL(blob), el = document.createElement("a"); el.href = u; el.download = name; el.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); };
+  $("#inkPng").onclick = async () => {
+    if (!curInk) return;
+    save(await Ink.toPng(curInk.out.markup, curInk.out.w, curInk.out.h), fname(curInk.a) + ".png");
+  };
+  $("#btnInkZip").onclick = async () => {
+    if (!P.rows.length) { Util.toast("내려받을 시도가 없어요.", "warn"); return; }
+    if (typeof JSZip === "undefined") { Util.toast("ZIP 라이브러리를 불러오지 못했어요.", "bad"); return; }
+    Util.toast("이미지를 만드는 중… (" + P.rows.length + "건)");
+    try {
+      const docs = await DB.listStrokes();
+      const byId = new Map(docs.map(x => [x.id, x]));
+      const zip = new JSZip(); let n = 0;
+      for (const a of P.rows) {
+        const ink = (byId.get(a.id) || {}).ink;
+        if (!ink) continue;
+        const o = await Ink.svg(ink, {});
+        zip.file(fname(a) + ".png", await Ink.toPng(o.markup, o.w, o.h));
+        n++;
+      }
+      if (!n) { Util.toast("필기 이미지가 저장된 시도가 없어요.", "warn"); return; }
+      save(await zip.generateAsync({ type: "blob" }), "간화자필기이미지_" + Util.today().replace(/-/g, "") + ".zip");
+    } catch (e) { console.error(e); Util.toast("ZIP 생성 실패: " + e.message, "bad"); }
+  };
 
   /* ============ ③ 회차별 변화 ============ */
   function buildStatFilters() { filterBlock("s", $("#statFilters"), renderStats, false, "blank"); }

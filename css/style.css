@@ -144,3 +144,7 @@ table.t td input { min-height: 36px; padding: 6px 8px; min-width: 120px; }
 .landing .btn { width: 100%; margin-top: 12px; font-size: 1.1rem; min-height: 56px; }
 
 @media (max-width: 560px) { .wrap { padding: 12px; } .card { padding: 14px; } }
+
+.modal { position: fixed; inset: 0; background: rgba(15,23,42,.55); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.modal-in { background: #fff; border-radius: 14px; padding: 16px; max-width: 960px; width: 100%; max-height: 92vh; overflow: auto; }
+.inkview svg { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }

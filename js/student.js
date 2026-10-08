@@ -25,7 +25,7 @@
       <h4>연구 참여 및 개인정보 수집·이용 안내</h4>
       <p><b>1. 연구자</b><br>전북대학교 중국·아시아연구소 학술연구교수 윤애경 (문의: 2517ae@hanmail.net)</p>
       <p><b>2. 연구 목적</b><br>본 연구는 간화자 학습 앱을 활용하여, 오류를 확인하고 반복 쓰기 연습 과정에서 학습자의 간화자 쓰기 정확도가 어떻게 변화하는지 분석하며, 그 결과를 수업 개선에 활용하는 것을 목적으로 합니다.</p>
-      <p><b>3. 수집하는 개인정보 항목</b><br>가입 정보: 학습자 ID, 전화번호(ID·비밀번호 찾기용), 국적, 성별, 전공, 학년, 중국어·한자 학습 기간, 한자 친숙도<br>학습 기록: 학습 날짜, 학습 단어, 연습 횟수, 시도별 소요 시간, 획수·획순·시작 위치·자형 오류 및 점수</p>
+      <p><b>3. 수집하는 개인정보 항목</b><br>가입 정보: 학습자 ID, 전화번호(ID·비밀번호 찾기용), 국적, 성별, 전공, 학년, 중국어·한자 학습 기간, 한자 친숙도<br>학습 기록: 학습 날짜, 학습 단어, 연습 횟수, 시도별 소요 시간, 획수·획순·시작 위치·자형 오류 및 점수, 학습자가 쓴 간화자 글씨 이미지(시도별)</p>
       <p><b>4. 개인정보 이용 목적 및 결과 공개</b><br>수집된 개인정보는 본 연구의 분석 및 수업 개선 목적으로만 이용합니다. 학술논문 등으로 연구 결과를 발표할 때는 개인을 식별할 수 없는 통계 형태로 제시합니다.</p>
       <p><b>5. 개인정보 보유·이용 기간 및 파기</b><br>수집된 개인정보는 수집일부터 연구 종료 후 3년까지 보관하며, 보관 기간이 끝나면 복구할 수 없는 방법으로 파기합니다.</p>
       <p><b>6. 자발적 참여 및 동의 거부에 관한 안내</b><br>연구 참여는 자발적이며, 연구 참여 및 연구 목적의 개인정보 수집·이용에 동의하지 않아도 성적이나 평가 등에 어떠한 불이익도 없습니다.</p>
@@ -526,6 +526,7 @@
       finalScore: Util.round1(final), leniency: CFG.leniency
     };
     const strokes = ev.map(e => ({ ch: R.ents[e.c].ch, ...e }));
+    const ink = Ink.collect(R.ents);          // 학생이 쓴 글씨(획 궤적)
 
     R.ents.forEach(e => { e.box.setGray(true); e.box.setNext(null); e.box.setEnabled(false); e.box.setDim(false); });
     $("#whHz").textContent = w.word;
@@ -535,7 +536,7 @@
     TTS.speak(w.word);
 
     if (st.user.guest) { $("#saveState").textContent = "👀 게스트 체험 모드라서 기록은 저장되지 않아요."; return; }
-    DB.addAttempt(att, strokes).then(ok => {
+    DB.addAttempt(att, strokes, ink).then(ok => {
       $("#saveState").textContent = ok ? "✔ 기록이 저장되었어요." : "⚠️ 저장 대기 중 (인터넷에 연결되면 자동 저장)";
       updateSync();
     }).catch(e => { console.error(e); $("#saveState").textContent = "⚠️ 저장 대기 중"; });

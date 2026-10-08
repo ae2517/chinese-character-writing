@@ -116,15 +116,15 @@ const DB = (() => {
   function pending() { return L.get("pending_attempts", []); }
 
   async function writeOne(item) {
-    const { att, strokes } = item;
+    const { att, strokes, ink } = item;
     if (demo) {
       const a = L.get("demo_attempts", []); a.push(att); L.set("demo_attempts", a);
-      const s = L.get("demo_strokes", []); s.push({ id: att.id, studentId: att.studentId, strokes }); L.set("demo_strokes", s);
+      const s = L.get("demo_strokes", []); s.push({ id: att.id, studentId: att.studentId, strokes, ink }); L.set("demo_strokes", s);
       return;
     }
     const batch = writeBatch(fs);
     batch.set(doc(fs, "attempts", att.id), att);
-    batch.set(doc(fs, "attemptStrokes", att.id), { id: att.id, studentId: att.studentId, ts: att.ts, strokes });
+    batch.set(doc(fs, "attemptStrokes", att.id), { id: att.id, studentId: att.studentId, ts: att.ts, strokes, ink });
     await batch.commit();
   }
 
@@ -144,9 +144,9 @@ const DB = (() => {
     return { saved, left: rest.length };
   }
 
-  async function addAttempt(att, strokes) {
+  async function addAttempt(att, strokes, ink) {
     const q = pending();
-    q.push({ att, strokes });
+    q.push({ att, strokes, ink });
     L.set("pending_attempts", q);
     const r = await flushPending();
     return r.left === 0;
