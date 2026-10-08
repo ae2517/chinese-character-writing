@@ -73,8 +73,8 @@
 
     <h3 style="margin-top:18px">계정 정보</h3>
     <div class="grid2">
-      <div><label class="f" for="suId">학습자 ID (영문/숫자/한글, 2~10자)</label>
-        <input id="suId" type="text" maxlength="10" autocapitalize="off" required></div>
+      <div><label class="f" for="suId">학습자 ID (학번)</label>
+        <input id="suId" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="10" autocomplete="off" required></div>
       <div><label class="f" for="suPw">비밀번호 (4자 이상)</label>
         <input id="suPw" type="password" autocomplete="new-password" minlength="4" required></div>
     </div>

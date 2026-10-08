@@ -18,7 +18,7 @@ service cloud.firestore {
       allow get: if true;
       allow create: if request.resource.data.id == sid
                     && sid != 'guest'
-                    && sid.size() <= 10
+                    && sid.matches('[0-9]{1,10}')
                     && request.resource.data.passHash is string;
       allow list, delete: if isProf();
       // 비밀번호 재설정: 전화번호 해시를 아는 사람이 같은 요청 안에서 studentPrivate 의 resetAt 을 갱신했을 때만 passHash 변경 허용

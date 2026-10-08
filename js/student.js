@@ -71,7 +71,7 @@
       const f = e.target;
       const id = $("#suId").value.trim().toLowerCase(), pw = $("#suPw").value;
       if (id === CFG.guest.id) { err.textContent = "이 ID는 체험용으로 예약되어 있어요. 다른 ID를 써 주세요."; return; }
-      if (!/^[a-z0-9가-힣_-]{2,10}$/.test(id)) { err.textContent = "ID는 영문/숫자/한글/_/- 로 2~10자여야 해요."; return; }
+      if (!/^[0-9]{1,10}$/.test(id)) { err.textContent = "학습자 ID는 학번(숫자 10자리 이내)만 입력할 수 있어요."; return; }
       if (pw.length < 4) { err.textContent = "비밀번호는 4자 이상이어야 해요."; return; }
       const consent = f.consent.value;
       if (!consent) { err.textContent = "연구 참여 동의 여부를 선택해 주세요."; return; }
