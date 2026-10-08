@@ -70,6 +70,7 @@
       <div class="row sp">
         <h2 style="margin:0">학습 데이터 (시도별)</h2>
         <div class="row">
+          <button id="btnCols" class="btn sm">⚙ 열 순서·표시</button>
           <button id="btnRefresh" class="btn sm">🔄 새로 불러오기</button>
           <button id="btnXlsxAll" class="btn primary sm">⬇ 엑셀 다운로드 (전체)</button>
           <button id="btnXlsxFilt" class="btn sm">⬇ 엑셀 (현재 필터만)</button>
@@ -105,6 +106,14 @@
   </div>
 </section>
 
+<div id="colModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-in" style="max-width:560px">
+    <div class="row sp"><h3 style="margin:0">열 순서·표시</h3><button id="colClose" class="btn sm">닫기 ✕</button></div>
+    <p class="muted small" style="margin:6px 0">▲▼로 순서를 바꾸고, 체크로 표에 보일 열을 고릅니다. 이 순서는 이 브라우저에 저장되며 <b>엑셀의 '시도별_데이터' 열 순서에도 그대로 적용</b>됩니다(엑셀에는 숨긴 열도 모두 들어갑니다).</p>
+    <div class="row" style="margin-bottom:8px"><button id="colReset" class="btn sm">기본 순서로 되돌리기</button></div>
+    <div id="colList" class="collist"></div>
+  </div>
+</div>
 <div id="inkModal" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-in">
     <div class="row sp"><h3 id="inkTitle" style="margin:0"></h3><button id="inkClose" class="btn sm">닫기 ✕</button></div>

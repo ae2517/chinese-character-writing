@@ -332,7 +332,7 @@
       R.ents.push({ ch: c.ch, data: c.data, box, E: c.data.strokes.length, canvas: [] });
     });
     $("#writeZone").scrollIntoView({ block: "start", behavior: "auto" });
-    $("#btnReplay").classList.toggle("hidden", mode !== "trace");
+    $("#btnReplay").classList.remove("hidden");              // 따라쓰기·빈칸쓰기 모두 '획순 다시 보기' 가능
     $("#btnHint").classList.toggle("hidden", false);
     $("#timer").textContent = "⏱ 0.0초";
     $("#dots").innerHTML = "";
@@ -369,7 +369,7 @@
     R.replays++;                                                                   // 획순 다시 보기
     const token = R.token;
     await playDemo(token);
-    if (R && R.token === token) { R.busy = false; refreshBoxes(); setFb("", "이어서 따라 써 보세요 ✍️", ""); }
+    if (R && R.token === token) { R.busy = false; refreshBoxes(); setFb("", R.mode === "trace" ? "이어서 따라 써 보세요 ✍️" : "이어서 써 보세요 ✍️", ""); }
   }
 
   function firstUnused(ent) {
@@ -615,12 +615,14 @@
         ${a.mode === "trace"
           ? `<button class="btn primary" id="rNext">✍️ 빈칸에 직접 쓰기 ▶</button><button class="btn" id="rAgain">따라쓰기 한 번 더</button>`
           : `<button class="btn primary" id="rNext">🔁 한 번 더 쓰기 (${nextRound}회차)</button><button class="btn" id="rAgain">따라쓰기로 복습</button>`}
+        ${nextWordOf(st.word) ? `<button class="btn blue" id="rWord">다음 단어 ▶</button>` : ""}
         <button class="btn" id="rList">단어 목록</button>
       </div>`;
     box.classList.remove("hidden");
     $("#rNext").onclick = () => startRound("blank");
     $("#rAgain").onclick = () => startRound("trace");
     $("#rList").onclick = () => $("#btnBack").click();
+    if ($("#rWord")) $("#rWord").onclick = () => $("#btnNextWord").click();
     box.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 })();

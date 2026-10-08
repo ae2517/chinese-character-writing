@@ -197,6 +197,42 @@
     }
   }
 
+  /* ---- 열 순서·표시 설정 (브라우저에 저장, 엑셀 열 순서에도 적용) ---- */
+  const DEFAULT_ORDER = ["학습자ID", "학습날짜", "과", "학습단어", "연습유형", "연습횟수(유형별)", "전체연습회차", "획순다시보기횟수", "다음획힌트횟수", "소요시간(초)",
+    "획수오류", "획순오류", "획시작위치오류", "자형오류", "획수점수", "획순점수", "획시작위치점수", "자형점수", "최종점수"];
+  const allKeys = () => Object.keys(Export.attemptRow({}, {}));
+  function loadCols() {
+    const keys = allKeys();
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem("prof_cols")); } catch (e) { /* 기본값 */ }
+    let order = saved && Array.isArray(saved.order) ? saved.order.filter(k => keys.includes(k)) : DEFAULT_ORDER.filter(k => keys.includes(k));
+    keys.forEach(k => { if (!order.includes(k)) order.push(k); });                    // 새로 생긴 열은 뒤에 추가
+    const hidden = saved && Array.isArray(saved.hidden) ? new Set(saved.hidden) : new Set(keys.filter(k => !DEFAULT_ORDER.includes(k)));
+    return { order, hidden };
+  }
+  const saveCols = c => localStorage.setItem("prof_cols", JSON.stringify({ order: c.order, hidden: [...c.hidden] }));
+  const visibleCols = () => { const c = loadCols(); return c.order.filter(k => !c.hidden.has(k)); };
+
+  function renderColList() {
+    const c = loadCols(), box = $("#colList");
+    box.innerHTML = "";
+    c.order.forEach((k, i) => {
+      const row = document.createElement("div");
+      row.className = "colrow" + (c.hidden.has(k) ? " off" : "");
+      row.innerHTML = `<span class="no">${i + 1}</span><label><input type="checkbox" ${c.hidden.has(k) ? "" : "checked"}> ${Util.esc(k)}</label>
+        <button class="btn sm" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button><button class="btn sm" ${i === c.order.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>`;
+      const [up, down] = $$("button", row);
+      $("input", row).onchange = e => { if (e.target.checked) c.hidden.delete(k); else c.hidden.add(k); saveCols(c); renderColList(); renderData(); };
+      const move = d => { const j = i + d; [c.order[i], c.order[j]] = [c.order[j], c.order[i]]; saveCols(c); renderColList(); renderData(); };
+      up.onclick = () => move(-1); down.onclick = () => move(1);
+      box.appendChild(row);
+    });
+  }
+  $("#btnCols").onclick = () => { renderColList(); $("#colModal").classList.remove("hidden"); };
+  $("#colClose").onclick = () => $("#colModal").classList.add("hidden");
+  $("#colModal").onclick = e => { if (e.target.id === "colModal") $("#colModal").classList.add("hidden"); };
+  $("#colReset").onclick = () => { localStorage.removeItem("prof_cols"); renderColList(); renderData(); };
+
   /* ============ ② 학습 데이터 ============ */
   function buildDataFilters() {
     const pw = $("#dSortWord") ? $("#dSortWord").value : "none", pr = $("#dSortRound") ? $("#dSortRound").value : "recent";
@@ -228,7 +264,7 @@
     $("#dataStat").innerHTML = `<div><span class="muted small">시도 수</span><b>${rows.length}</b></div><div><span class="muted small">학습자</span><b>${stu.size}</b></div>
       <div><span class="muted small">단어</span><b>${words.size}</b></div><div><span class="muted small">평균 최종점수</span><b>${mean(r => r.finalScore)}</b></div>
       <div><span class="muted small">평균 소요시간(초)</span><b>${mean(r => r.durationSec)}</b></div>`;
-    const cols = ["필기", "학습자ID", "학습날짜", "과", "학습단어", "연습유형", "연습횟수(유형별)", "전체연습회차", "획순다시보기횟수", "다음획힌트횟수", "획수오류", "획순오류", "획시작위치오류", "자형오류", "소요시간(초)", "획수점수", "획순점수", "획시작위치점수", "자형점수", "최종점수"];
+    const cols = ["필기", ...visibleCols()];
     const t = $("#dataTbl");
     t.innerHTML = "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr>";
     rows.slice(0, 300).forEach(a => {
@@ -246,7 +282,7 @@
     if (!list.length) { Util.toast("내려받을 데이터가 없어요.", "warn"); return; }
     try {
       const strokeDocs = await DB.listStrokes();
-      Export.download({ attempts: list, students: P.students, strokeDocs, logins: P.logins }, label);
+      Export.download({ attempts: list, students: P.students, strokeDocs, logins: P.logins, colOrder: loadCols().order }, label);
     } catch (e) { console.error(e); Util.toast("엑셀 생성 실패: " + e.message, "bad"); }
   }
   $("#btnXlsxAll").onclick = () => doExport(P.attempts, "전체");

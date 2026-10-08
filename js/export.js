@@ -82,7 +82,7 @@ const Export = (() => {
       ["획시작위치점수", "100 × (1 − 획시작위치오류 / 정답 총획수)"],
       ["자형점수", "각 획의 자형 유사도(모양 50% + 위치 25% + 크기 25%)의 평균. 못 쓴 획은 0점으로 계산"],
       ["최종점수", `획수 ${W.count} + 획순 ${W.order} + 획시작위치 ${W.start} + 자형 ${W.shape} 가중 평균 (시도마다 계산)`],
-      ["획순다시보기횟수", "따라쓰기 화면에서 '▶ 획순 다시 보기'를 눌러 애니메이션을 다시 본 횟수(처음 자동 재생과 '건너뛰기'는 제외). 빈칸쓰기에서는 이 버튼이 없어 0. 이 기능 추가 전 기록은 빈칸."],
+      ["획순다시보기횟수", "따라쓰기 화면에서 '▶ 획순 다시 보기'를 눌러 애니메이션을 다시 본 횟수(처음 자동 재생과 '건너뛰기'는 제외). 따라쓰기·빈칸쓰기 모두에서 센다. 이 기능 추가 전 기록은 빈칸."],
       ["다음획힌트횟수", "'💡 다음 획 힌트'를 눌러 다음 획의 애니메이션을 본 횟수"],
       ["소요시간(초)", "첫 획을 쓰기 시작한 순간부터 '채점' 버튼을 누를 때까지"],
       ["첫획까지시간(초)", "쓰기 화면이 열린 후 첫 획을 쓰기 시작할 때까지(생각 시간)"],
@@ -92,11 +92,18 @@ const Export = (() => {
     ];
   };
 
-  function build({ attempts, students, strokeDocs, logins }) {
+  function build({ attempts, students, strokeDocs, logins, colOrder }) {
     Util.annotateRounds(attempts);
     const stuMap = new Map(students.map(s => [s.id, s]));
     const wb = XLSX.utils.book_new();
-    const rows = attempts.slice().sort((a, b) => a.ts - b.ts).map(a => attemptRow(a, stuMap.get(a.studentId)));
+    const rows = attempts.slice().sort((a, b) => a.ts - b.ts).map(a => {
+      const r = attemptRow(a, stuMap.get(a.studentId));
+      if (!colOrder || !colOrder.length) return r;
+      const o = {};
+      colOrder.forEach(k => { if (k in r) o[k] = r[k]; });                 // 교수가 정한 순서
+      Object.keys(r).forEach(k => { if (!(k in o)) o[k] = r[k]; });
+      return o;
+    });
     const add = (name, data, isAoa) => {
       const ws = isAoa ? XLSX.utils.aoa_to_sheet(data) : XLSX.utils.json_to_sheet(data);
       if (!isAoa && data.length) ws["!cols"] = Object.keys(data[0]).map(k => ({ wch: Math.max(8, Math.min(24, k.length * 1.6 + 2)) }));
