@@ -95,7 +95,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue); outl
 .stagebtn { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-weight: 700; cursor: pointer; }
 .stagebtn.on { background: var(--blue); color: #fff; border-color: var(--blue); }
 .boxes { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 6px 0 10px; --rows: 1; }
-.boxwrap { width: min(300px, calc((100vw - 76px) / var(--rows) - 10px)); aspect-ratio: 1; }
+.boxwrap { width: min(var(--boxsize, 300px), calc((100vw - 56px - 10px * (var(--rows) - 1)) / var(--rows))); aspect-ratio: 1; }
 .boxes, .boxwrap { touch-action: none; overscroll-behavior: contain; }
 .cbox { width: 100%; height: 100%; display: block; touch-action: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; border-radius: 6px; cursor: crosshair; }
 .cb-bg { fill: #fff; }
@@ -200,3 +200,36 @@ html.practice #viewPractice { flex: 1 1 auto; min-height: 0; overflow-y: auto; o
 /* 스마트폰: 쓰기 칸 밖은 세로 스크롤 허용, 쓰기 칸 위는 스크롤 금지 */
 .writezone .pbar { flex-wrap: nowrap; }
 html.practice #viewPractice { touch-action: pan-y; }
+
+/* ===== 스마트폰: 쓰기 칸 / 피드백 / 채점 버튼이 한 화면에 ===== */
+.roundline { text-align: center; margin: 0 0 4px; }
+.actionbar { position: sticky; bottom: 0; z-index: 15; background: #fff; border-top: 1px solid var(--line); padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); margin: 6px -4px 0; }
+.actionbar.unstick { position: static; border-top: 0; }
+.actionbar .fb { min-height: 0; height: 74px; overflow: auto; padding: 6px 10px; margin: 0 4px 6px; font-size: .86rem; }
+.actionbar .fb .t { font-size: .92rem; }
+.actionbar .fb ul { margin: 2px 0 0; padding-left: 1.1em; }
+.actionbar .tools { margin: 0 4px; gap: 6px; flex-wrap: nowrap; justify-content: space-between; }
+.actionbar .tools .btn.submit { flex: 1 1 auto; min-width: 118px; min-height: 44px; font-size: 1rem; }
+@media (max-width: 560px) {
+  .actionbar .tools .lbl { display: none; }
+  .actionbar .tools { gap: 4px; }
+  .actionbar .tools .btn:not(.submit) { width: 38px; min-width: 0; padding: 8px 0; flex: 0 0 38px; min-height: 44px; }
+  .actionbar .tools .btn.submit { min-width: 0; padding: 8px 6px; font-size: .92rem; white-space: nowrap; }
+  .wordhead { display: none; }
+  .stage { margin-bottom: 6px; }
+  .stagebtn { padding: 6px 12px; }
+}
+
+.editgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.editgrid label { font-size: .8rem; font-weight: 700; color: var(--sub); }
+.editgrid input { margin-top: 3px; min-height: 36px; padding: 6px 8px; min-width: 0; }
+
+/* 화면 높이가 낮은 스마트폰: 덜 중요한 줄을 줄여 쓰기 칸을 더 크게 */
+@media (max-height: 700px) {
+  .roundline { display: none; }
+  .stage { margin-bottom: 2px; }
+  .stagebtn { padding: 4px 10px; font-size: .85rem; }
+  .actionbar .fb { height: 58px; }
+  .actionbar .fb .muted.small { display: none; }
+  .wordbar { padding-bottom: 0; }
+}

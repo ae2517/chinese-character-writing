@@ -148,16 +148,16 @@
 <section id="viewPractice" class="hidden">
   <div class="card">
     <div class="wordhead">
-      <div style="margin-bottom:4px"><span id="roundInfo" class="pill"></span></div>
       <div id="whHz" class="hz"></div>
       <div id="whPy" class="py"></div>
       <div id="whKo" class="ko"></div>
       <button id="btnSpeak" class="btn sm" style="margin-top:6px">🔊 발음 듣기</button>
     </div>
     <div class="stage">
-      <button class="stagebtn" data-mode="trace">① 획순 보고 따라쓰기</button>
-      <button class="stagebtn" data-mode="blank">② 빈칸에 직접 쓰기</button>
+      <button class="stagebtn" data-mode="trace">① 따라쓰기</button>
+      <button class="stagebtn" data-mode="blank">② 빈칸쓰기</button>
     </div>
+    <div class="roundline"><span id="roundInfo" class="pill"></span></div>
     <div id="writeZone" class="writezone">
     <div class="pbar">
       <button id="btnNextWord" class="btn sm blue">다음 단어 ▶</button>
@@ -168,15 +168,17 @@
     <div id="boxes" class="boxes"></div>
     <div id="dots" class="dots"></div>
     </div>
-    <div class="tools">
-      <button id="btnReplay" class="btn sm">▶ 획순 다시 보기</button>
-      <button id="btnHint" class="btn sm">💡 다음 획 힌트</button>
-      <button id="btnUndo" class="btn sm">↩ 되돌리기</button>
-      <button id="btnClear" class="btn sm">🧹 이 글자 지우기</button>
-      <button id="btnNextChar" class="btn sm hidden">다음 글자 ▶</button>
-      <button id="btnSubmit" class="btn primary">✅ 다 썼어요 (채점)</button>
+    <div id="actionBar" class="actionbar">
+      <div id="fb" class="fb"><div class="t">준비되면 써 보세요 ✍️</div><div class="muted small">획을 하나 쓸 때마다 바로 알려 드려요. 틀리면 ↩ 되돌리기로 고쳐 쓸 수 있어요.</div></div>
+      <div class="tools">
+        <button id="btnReplay" class="btn sm" aria-label="획순 다시 보기"><span class="ic">▶</span><span class="lbl"> 획순 다시 보기</span></button>
+        <button id="btnHint" class="btn sm" aria-label="다음 획 힌트"><span class="ic">💡</span><span class="lbl"> 다음 획 힌트</span></button>
+        <button id="btnUndo" class="btn sm" aria-label="되돌리기"><span class="ic">↩</span><span class="lbl"> 되돌리기</span></button>
+        <button id="btnClear" class="btn sm" aria-label="이 글자 지우기"><span class="ic">🧹</span><span class="lbl"> 이 글자 지우기</span></button>
+        <button id="btnNextChar" class="btn sm hidden" aria-label="다음 글자"><span class="ic">⏭</span><span class="lbl"> 다음 글자</span></button>
+        <button id="btnSubmit" class="btn primary submit"><span class="ic">✅</span> 다 썼어요</button>
+      </div>
     </div>
-    <div id="fb" class="fb"><div class="t">준비되면 써 보세요 ✍️</div><div class="muted small">획을 하나 쓸 때마다 바로 알려 드려요. 틀리면 ↩ 되돌리기로 고쳐 쓸 수 있어요.</div></div>
   </div>
   <div id="result" class="card result hidden"></div>
 </section>

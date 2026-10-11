@@ -45,6 +45,8 @@
       console.error(e);
       Util.toast("데이터를 불러오지 못했어요: " + (e.code || e.message) + " (Firestore 규칙/교수 계정 확인)", "bad");
     }
+    const wordById = new Map(P.words.map(w => [w.id, w]));
+    P.attempts.forEach(a => { const w = wordById.get(a.wordId); if (w) { a.book = w.book || ""; a.lesson = w.lesson; a.word = w.word; a.pinyin = w.pinyin; a.meaning = w.meaning; } });
     Util.annotateRounds(P.attempts);
     P.stuMap = new Map(P.students.map(s => [s.id, s]));
     renderWordList(); buildDataFilters(); renderData(); buildStatFilters(); renderStudents();
@@ -113,8 +115,8 @@
     const base = P.words.filter(w => (w.book || "") === book && w.lesson === lesson).reduce((m, w) => Math.max(m, w.order || 0), 0);
     const clean = s => s.replace(/[\/\\#?[\]]/g, "-");
     const list = ok.map((d, i) => {
-      const id = clean(book) + "__" + clean(lesson) + "__" + d.word;                 // 교재__과__단어 (같은 과 이름이 다른 교재에 있어도 구분)
-      const old = P.words.find(w => w.id === id);
+      const old = P.words.find(w => (w.book || "") === book && w.lesson === lesson && w.word === d.word);
+      const id = old ? old.id : clean(book) + "__" + clean(lesson) + "__" + d.word;      // 교재__과__단어 (같은 과 이름이 다른 교재에 있어도 구분)
       return { id, book, lesson, word: d.word, pinyin: d.pinyin.replace(/\s+/g, ""), meaning: d.meaning.trim(), createdAt: old ? old.createdAt : Date.now(), order: old ? old.order : base + i + 1 };
     });
     try {
@@ -127,6 +129,47 @@
 
   const bookName = b => b || "교재 미지정";
 
+  /** 한 단어 수정 저장. id 는 그대로 두어 학생들의 학습 기록·진행 상황이 끊기지 않게 함 */
+  async function saveWordEdit(w, v) {
+    v = { word: v.word.trim(), pinyin: v.pinyin.replace(/\s+/g, ""), meaning: v.meaning.trim(), book: v.book.trim(), lesson: v.lesson.trim() };
+    if (!v.word || !v.book || !v.lesson) { Util.toast("단어, 교재명, 과는 비울 수 없어요.", "warn"); return false; }
+    const chars = [...v.word].filter(Hanzi.isHan);
+    if (!chars.length) { Util.toast("한자가 들어 있는 단어를 입력해 주세요.", "warn"); return false; }
+    if (v.word !== w.word) {
+      const datas = await Promise.all(chars.map(c => Hanzi.load(c)));
+      if (datas.some(d => d === undefined)) { Util.toast("획 데이터를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.", "bad"); return false; }
+      if (datas.some(d => d === null)) { Util.toast("획 데이터가 없는 글자가 있어요: " + chars.filter((c, i) => datas[i] === null).join(" "), "bad"); return false; }
+      const n = P.attempts.filter(a => a.wordId === w.id).length;
+      if (n && !confirm(`이 단어로 쌓인 학습 기록 ${n}건이 있어요.\n단어를 '${w.word}' → '${v.word}'(으)로 바꾸면 그 기록들도 새 단어로 표시됩니다.\n(완전히 다른 단어라면 새 단어로 등록하는 편이 좋아요.) 계속할까요?`)) return false;
+    }
+    if (P.words.some(x => x.id !== w.id && (x.book || "") === v.book && x.lesson === v.lesson && x.word === v.word)) {
+      Util.toast("같은 교재·과에 이미 같은 단어가 있어요.", "warn"); return false;
+    }
+    const moved = (w.book || "") !== v.book || w.lesson !== v.lesson;
+    const order = moved ? P.words.filter(x => (x.book || "") === v.book && x.lesson === v.lesson).reduce((m, x) => Math.max(m, x.order || 0), 0) + 1 : w.order;
+    await DB.saveWords([{ ...w, ...v, order, updatedAt: Date.now() }]);
+    return true;
+  }
+
+  /** 교재명 또는 과 이름을 한 번에 바꾸기(그 묶음의 모든 단어에 적용) */
+  async function renameGroup(kind, book, lesson) {
+    const label = kind === "book" ? "교재명" : "과 이름";
+    const cur = kind === "book" ? book : lesson;
+    const next = (prompt(`${label}을(를) 바꿔 주세요.\n(현재: ${cur || "교재 미지정"})`, cur) || "").trim();
+    if (!next || next === cur) return;
+    const targets = P.words.filter(w => (w.book || "") === book && (kind === "book" || w.lesson === lesson));
+    const exists = kind === "book"
+      ? P.words.some(w => (w.book || "") === next)
+      : P.words.some(w => (w.book || "") === book && w.lesson === next);
+    if (exists && !confirm(`'${next}'은(는) 이미 있어요. 합쳐서 같은 묶음으로 만들까요?`)) return;
+    // 합치면서 같은 교재·과·단어가 겹치면 막음
+    const clash = targets.find(w => P.words.some(x => !targets.includes(x) && (x.book || "") === (kind === "book" ? next : book) && x.lesson === (kind === "book" ? w.lesson : next) && x.word === w.word));
+    if (clash) { Util.toast(`'${clash.word}' 단어가 이미 같은 위치에 있어서 합칠 수 없어요.`, "warn"); return; }
+    const list = targets.map(w => kind === "book" ? { ...w, book: next } : { ...w, lesson: next });
+    try { await DB.saveWords(list); Util.toast(`${list.length}개 단어의 ${label}을(를) 바꿨어요.`, "ok"); await loadAll(); }
+    catch (e) { console.error(e); Util.toast("저장 실패: " + (e.code || e.message), "bad"); }
+  }
+
   function renderWordList() {
     const fill = (id, vals) => { const dl = $(id); dl.innerHTML = ""; vals.forEach(v => { const o = document.createElement("option"); o.value = v; dl.appendChild(o); }); };
     fill("#bookList", [...new Set(P.words.map(w => w.book || "").filter(Boolean))].sort(Util.nat));
@@ -134,24 +177,54 @@
     const box = $("#wordList"); box.innerHTML = "";
     if (!P.words.length) { box.innerHTML = '<p class="muted">아직 등록된 단어가 없어요.</p>'; return; }
     [...new Set(P.words.map(w => w.book || ""))].sort(Util.nat).forEach(b => {
-      const bh = document.createElement("h2"); bh.textContent = "📖 " + bookName(b); bh.style.marginTop = "18px"; box.appendChild(bh);
+      const bh = document.createElement("div"); bh.className = "row"; bh.style.marginTop = "18px";
+      bh.innerHTML = `<h2 style="margin:0">📖 ${Util.esc(bookName(b))}</h2><button class="btn sm">✏ ${b ? "교재명 수정" : "교재명 지정"}</button>`;
+      $("button", bh).onclick = () => renameGroup("book", b, "");
+      box.appendChild(bh);
       const inBook = P.words.filter(w => (w.book || "") === b);
       [...new Set(inBook.map(w => w.lesson))].sort(Util.nat).forEach(l => {
-        const h = document.createElement("h3"); h.textContent = l; box.appendChild(h);
+        const h = document.createElement("div"); h.className = "row"; h.style.margin = "10px 0 4px";
+        h.innerHTML = `<h3 style="margin:0">${Util.esc(l)}</h3><button class="btn sm">✏ 과 이름 수정</button>`;
+        $("button", h).onclick = () => renameGroup("lesson", b, l);
+        box.appendChild(h);
         const wrap = document.createElement("div"); wrap.className = "tscroll"; wrap.style.maxHeight = "none";
         const t = document.createElement("table"); t.className = "t";
         t.innerHTML = "<tr><th>단어</th><th>병음</th><th>뜻</th><th>학습 시도</th><th></th></tr>";
-        inBook.filter(w => w.lesson === l).sort((a, b2) => (a.order || 0) - (b2.order || 0)).forEach(w => {
+        inBook.filter(w => w.lesson === l).sort((a, c) => (a.order || 0) - (c.order || 0)).forEach(w => {
           const n = P.attempts.filter(a => a.wordId === w.id).length;
           const tr = document.createElement("tr");
-          tr.innerHTML = `<td style="font-family:var(--hanzi);font-size:1.2rem">${Util.esc(w.word)}</td><td>${Util.esc(w.pinyin)}</td><td>${Util.esc(w.meaning)}</td><td>${n}</td>
-            <td><button class="btn sm">🔊</button> <button class="btn sm danger">삭제</button></td>`;
-          const [b1, b2b] = $$("button", tr);
-          b1.onclick = () => TTS.speak(w.word);
-          b2b.onclick = async () => {
-            if (!confirm(`'${w.word}' 단어를 학생 화면에서 삭제할까요?\n(이미 쌓인 학습 기록은 그대로 남습니다.)`)) return;
-            await DB.deleteWord(w.id); await loadAll();
+          const show = () => {
+            tr.innerHTML = `<td style="font-family:var(--hanzi);font-size:1.2rem">${Util.esc(w.word)}</td><td>${Util.esc(w.pinyin)}</td><td>${Util.esc(w.meaning)}</td><td>${n}</td>
+              <td><button class="btn sm">🔊</button> <button class="btn sm">✏ 수정</button> <button class="btn sm danger">삭제</button></td>`;
+            const [b1, b2, b3] = $$("button", tr);
+            b1.onclick = () => TTS.speak(w.word);
+            b2.onclick = edit;
+            b3.onclick = async () => {
+              if (!confirm(`'${w.word}' 단어를 학생 화면에서 삭제할까요?\n(이미 쌓인 학습 기록은 그대로 남습니다.)`)) return;
+              await DB.deleteWord(w.id); await loadAll();
+            };
           };
+          const edit = () => {
+            tr.innerHTML = `<td colspan="5"><div class="editgrid">
+              <label>교재명<input data-k="book" type="text" list="bookList" value="${Util.esc(w.book || "")}"></label>
+              <label>과<input data-k="lesson" type="text" list="lessonList" value="${Util.esc(w.lesson)}"></label>
+              <label>단어<input data-k="word" type="text" value="${Util.esc(w.word)}"></label>
+              <label>병음<input data-k="pinyin" type="text" value="${Util.esc(w.pinyin)}"></label>
+              <label>뜻<input data-k="meaning" type="text" value="${Util.esc(w.meaning)}"></label>
+              </div><div class="row" style="margin-top:8px"><button class="btn primary sm">💾 저장</button><button class="btn sm">취소</button>
+              <button class="btn sm" title="단어를 바꾼 경우 병음을 다시 만들어 채웁니다">🔄 병음 다시 만들기</button></div></td>`;
+            const v = () => Object.fromEntries($$("input", tr).map(i => [i.dataset.k, i.value]));
+            const [sv, cancel, regen] = $$("button", tr);
+            sv.onclick = async () => {
+              sv.disabled = true;
+              try { if (await saveWordEdit(w, v())) { Util.toast("수정했어요.", "ok"); await loadAll(); return; } }
+              catch (e) { console.error(e); Util.toast("저장 실패: " + (e.code || e.message), "bad"); }
+              sv.disabled = false;
+            };
+            cancel.onclick = show;
+            regen.onclick = () => { try { const py = pinyinPro.pinyin($("[data-k=word]", tr).value.trim(), { toneType: "symbol" }).replace(/\s+/g, ""); $("[data-k=pinyin]", tr).value = py; } catch (e) { Util.toast("병음을 만들지 못했어요.", "warn"); } };
+          };
+          show();
           t.appendChild(tr);
         });
         wrap.appendChild(t); box.appendChild(wrap);

@@ -335,7 +335,7 @@
     const token = tokenSeq;
     const w = st.word;
     $$(".stagebtn").forEach(b => b.classList.toggle("on", b.dataset.mode === mode));
-    $("#result").classList.add("hidden"); $("#writeZone").classList.remove("unstick");
+    $("#result").classList.add("hidden"); $("#writeZone").classList.remove("unstick"); $("#actionBar").classList.remove("unstick");
     $("#whHz").textContent = mode === "trace" ? w.word : "□".repeat(st.chars.length);
     const boxes = $("#boxes");
     boxes.innerHTML = "";
@@ -351,6 +351,7 @@
       box.onStroke = (pts, path) => onStroke(i, pts, path);
       R.ents.push({ ch: c.ch, data: c.data, box, E: c.data.strokes.length, canvas: [] });
     });
+    sizeBoxes();
     $("#writeZone").scrollIntoView({ block: "start", behavior: "auto" });
     $("#btnReplay").classList.remove("hidden");              // 따라쓰기·빈칸쓰기 모두 '획순 다시 보기' 가능
     $("#btnHint").classList.toggle("hidden", false);
@@ -372,7 +373,7 @@
 
   async function playDemo(token) {
     R.busy = true; R.skip = false; refreshBoxes();
-    $("#btnReplay").textContent = "⏭ 건너뛰기";
+    $("#btnReplay").innerHTML = '<span class="ic">⏭</span><span class="lbl"> 건너뛰기</span>';
     setFb("ok", "👀 획순을 잘 보세요", "한 획씩 쓰는 순서와 방향을 보여 드려요.");
     for (const e of R.ents) {
       if (!R || R.token !== token || R.skip) break;
@@ -380,7 +381,7 @@
     }
     if (R && R.token === token) {
       R.ents.forEach(e => { e.box.stop(); e.box.clearAnim(); });
-      $("#btnReplay").textContent = "▶ 획순 다시 보기";
+      $("#btnReplay").innerHTML = '<span class="ic">▶</span><span class="lbl"> 획순 다시 보기</span>';
     }
   }
   async function replayDemo() {
@@ -391,6 +392,22 @@
     await playDemo(token);
     if (R && R.token === token) { R.busy = false; refreshBoxes(); setFb("", R.mode === "trace" ? "이어서 따라 써 보세요 ✍️" : "이어서 써 보세요 ✍️", ""); }
   }
+
+  /** 쓰기 칸 크기 = (연습 영역 높이 − 칸을 뺀 나머지 높이)를 넘지 않게. 쓰는 도중에는 바꾸지 않음 */
+  function sizeBoxes() {
+    const pv = $("#viewPractice");
+    if (!pv || pv.classList.contains("hidden") || !R || (R.firstPen && !R.submitted)) return;
+    const boxes = $("#boxes"), card = pv.querySelector(".card");
+    const n = R.ents.length, perRow = Math.min(n, window.innerWidth >= 700 ? 4 : 2), rows = Math.ceil(n / perRow);
+    const others = card.offsetHeight - boxes.offsetHeight;
+    const avail = pv.clientHeight - others - 24;
+    const side = Math.max(130, Math.min(300, Math.floor((avail - 10 * (rows - 1)) / rows)));
+    boxes.style.setProperty("--boxsize", side + "px");
+  }
+  let sizeTimer = null;
+  const sizeSoon = () => { clearTimeout(sizeTimer); sizeTimer = setTimeout(sizeBoxes, 120); };
+  window.addEventListener("resize", sizeSoon);
+  window.addEventListener("orientationchange", sizeSoon);
 
   function firstUnused(ent) {
     const used = new Set(ent.canvas.filter(x => x.matched >= 0).map(x => x.matched));
@@ -557,7 +574,7 @@
     if (!R || R.submitted || R.busy) return;
     const total = R.ents.reduce((s, e) => s + e.canvas.length, 0);
     if (!total) { Util.toast("먼저 한 획이라도 써 보세요.", "warn"); return; }
-    R.submitted = true; stopTimer(); $("#writeZone").classList.add("unstick");
+    R.submitted = true; stopTimer(); $("#writeZone").classList.add("unstick"); $("#actionBar").classList.add("unstick");
     const now = performance.now();
     const S = R.ents.reduce((s, e) => s + e.E, 0);
     const missing = R.ents.reduce((s, e) => s + Math.max(0, e.E - e.canvas.length), 0);
