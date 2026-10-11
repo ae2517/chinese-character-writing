@@ -373,7 +373,7 @@
 
   async function playDemo(token) {
     R.busy = true; R.skip = false; refreshBoxes();
-    $("#btnReplay").innerHTML = '<span class="ic">⏹</span><span class="lbl"> 멈추기</span>';
+    $("#btnReplay").innerHTML = '<span class="ic">⏹</span><span class="lbl"> 멈추기</span><span class="lbs">멈추기</span>';
     $("#btnReplay").setAttribute("aria-label", "획순 멈추기"); $("#btnReplay").title = "획순 멈추기";
     setFb("ok", "👀 획순을 잘 보세요", "한 획씩 쓰는 순서와 방향을 보여 드려요.");
     for (const e of R.ents) {
@@ -382,7 +382,7 @@
     }
     if (R && R.token === token) {
       R.ents.forEach(e => { e.box.stop(); e.box.clearAnim(); });
-      $("#btnReplay").innerHTML = '<span class="ic">▶</span><span class="lbl"> 획순 다시 보기</span>';
+      $("#btnReplay").innerHTML = '<span class="ic">▶</span><span class="lbl"> 획순 다시 보기</span><span class="lbs">다시보기</span>';
       $("#btnReplay").setAttribute("aria-label", "획순 다시 보기"); $("#btnReplay").title = "획순 다시 보기";
     }
   }

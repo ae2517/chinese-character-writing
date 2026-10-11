@@ -211,10 +211,14 @@ html.practice #viewPractice { touch-action: pan-y; }
 .actionbar .tools { margin: 0 4px; gap: 6px; flex-wrap: nowrap; justify-content: space-between; }
 .actionbar .tools .btn.submit { flex: 1 1 auto; min-width: 118px; min-height: 44px; font-size: 1rem; }
 @media (max-width: 560px) {
+  .actionbar .tools { gap: 4px; align-items: stretch; }
   .actionbar .tools .lbl { display: none; }
-  .actionbar .tools { gap: 4px; }
-  .actionbar .tools .btn:not(.submit) { width: 38px; min-width: 0; padding: 8px 0; flex: 0 0 38px; min-height: 44px; }
-  .actionbar .tools .btn.submit { min-width: 0; padding: 8px 6px; font-size: .92rem; white-space: nowrap; }
+  .actionbar .tools .lbs { display: block; }
+  .actionbar .tools .btn { flex-direction: column; gap: 1px; padding: 4px 2px; min-width: 0; min-height: 50px; line-height: 1.1; }
+  .actionbar .tools .btn:not(.submit) { flex: 1 1 0; max-width: 62px; }
+  .actionbar .tools .btn.submit { flex: 1.8 1 0; font-size: .8rem; white-space: nowrap; }
+  .actionbar .tools .ic { font-size: 1.2rem; line-height: 1.1; }
+  .actionbar .tools .lbs { font-size: .66rem; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
   .wordhead { display: none; }
   .stage { margin-bottom: 6px; }
   .stagebtn { padding: 6px 12px; }
@@ -233,3 +237,5 @@ html.practice #viewPractice { touch-action: pan-y; }
   .actionbar .fb .muted.small { display: none; }
   .wordbar { padding-bottom: 0; }
 }
+
+.lbs { display: none; }
