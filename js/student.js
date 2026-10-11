@@ -373,7 +373,8 @@
 
   async function playDemo(token) {
     R.busy = true; R.skip = false; refreshBoxes();
-    $("#btnReplay").innerHTML = '<span class="ic">⏭</span><span class="lbl"> 건너뛰기</span>';
+    $("#btnReplay").innerHTML = '<span class="ic">⏹</span><span class="lbl"> 멈추기</span>';
+    $("#btnReplay").setAttribute("aria-label", "획순 멈추기"); $("#btnReplay").title = "획순 멈추기";
     setFb("ok", "👀 획순을 잘 보세요", "한 획씩 쓰는 순서와 방향을 보여 드려요.");
     for (const e of R.ents) {
       if (!R || R.token !== token || R.skip) break;
@@ -382,11 +383,12 @@
     if (R && R.token === token) {
       R.ents.forEach(e => { e.box.stop(); e.box.clearAnim(); });
       $("#btnReplay").innerHTML = '<span class="ic">▶</span><span class="lbl"> 획순 다시 보기</span>';
+      $("#btnReplay").setAttribute("aria-label", "획순 다시 보기"); $("#btnReplay").title = "획순 다시 보기";
     }
   }
   async function replayDemo() {
     if (!R) return;
-    if (R.busy) { R.skip = true; R.ents.forEach(e => e.box.stop()); return; }      // 재생 중 누르면 건너뛰기(횟수에 넣지 않음)
+    if (R.busy) { R.skip = true; R.ents.forEach(e => e.box.stop()); return; }      // 재생 중 누르면 멈추기(횟수에 넣지 않음)
     R.replays++;                                                                   // 획순 다시 보기
     const token = R.token;
     await playDemo(token);
