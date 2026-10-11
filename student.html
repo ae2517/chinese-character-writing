@@ -136,6 +136,7 @@
   <div class="card">
     <h2>오늘의 단어</h2>
     <p class="muted small" style="margin-top:-6px">단어를 누르면 획순을 보고 → 따라 쓰고 → 빈칸에 직접 쓰는 연습이 시작돼요.</p>
+    <div id="bookChips" class="chips"></div>
     <div id="lessonChips" class="chips"></div>
     <div id="wordGrid" class="words"></div>
     <p id="noWords" class="muted hidden">아직 등록된 단어가 없어요. 교수님이 단어를 등록하면 여기에 나타납니다.</p>
@@ -147,6 +148,7 @@
 <section id="viewPractice" class="hidden">
   <div class="card">
     <div class="wordhead">
+      <div style="margin-bottom:4px"><span id="roundInfo" class="pill"></span></div>
       <div id="whHz" class="hz"></div>
       <div id="whPy" class="py"></div>
       <div id="whKo" class="ko"></div>
@@ -160,7 +162,6 @@
     <div class="pbar">
       <button id="btnNextWord" class="btn sm blue">다음 단어 ▶</button>
       <button id="btnBack" class="btn sm">← 단어 목록</button>
-      <span id="roundInfo" class="pill"></span>
       <span class="timer" id="timer">⏱ 0.0초</span>
     </div>
     <div class="wordbar"><span id="wbPy" class="py"></span><span id="wbKo" class="ko"></span><button id="btnSpeak2" class="btn sm" aria-label="발음 듣기">🔊</button></div>

@@ -42,6 +42,7 @@
       <h2>오늘 배운 단어 등록</h2>
       <p class="muted small" style="margin-top:-6px">중국어 단어만 입력하면 한어병음과 한국어 뜻이 자동으로 채워집니다. (뜻은 자동 번역이므로 저장 전에 꼭 확인·수정하세요.)</p>
       <div class="grid3">
+        <div><label class="f" for="wBook">교재명(대분류)</label><input id="wBook" type="text" list="bookList" placeholder="예: 신HSK 1" required><datalist id="bookList"></datalist></div>
         <div><label class="f" for="wLesson">과(Lesson)</label><input id="wLesson" type="text" list="lessonList" placeholder="예: 3과" required><datalist id="lessonList"></datalist></div>
       </div>
       <label class="f" for="wInput">중국어 단어 (줄바꿈·쉼표·공백으로 여러 개 구분)</label>

@@ -102,17 +102,20 @@
   }
 
   $("#btnSaveWords").onclick = async () => {
+    const book = $("#wBook").value.trim();
     const lesson = $("#wLesson").value.trim();
+    if (!book) { Util.toast("교재명을 입력해 주세요. 예: 신HSK 1", "warn"); $("#wBook").focus(); return; }
     if (!lesson) { Util.toast("과(Lesson)를 입력해 주세요. 예: 3과", "warn"); $("#wLesson").focus(); return; }
     const ok = draft.filter(d => d.chars && !d.missing.length && !d.net);
     const bad = draft.length - ok.length;
     if (!ok.length) { Util.toast("저장할 수 있는 단어가 없어요.", "warn"); return; }
     if (ok.some(d => !d.meaning.trim() || !d.pinyin.trim()) && !confirm("병음이나 뜻이 비어 있는 단어가 있어요. 그래도 저장할까요?")) return;
-    const base = P.words.filter(w => w.lesson === lesson).reduce((m, w) => Math.max(m, w.order || 0), 0);
+    const base = P.words.filter(w => (w.book || "") === book && w.lesson === lesson).reduce((m, w) => Math.max(m, w.order || 0), 0);
+    const clean = s => s.replace(/[\/\\#?[\]]/g, "-");
     const list = ok.map((d, i) => {
-      const id = lesson.replace(/[\/\\#?[\]]/g, "-") + "__" + d.word;
+      const id = clean(book) + "__" + clean(lesson) + "__" + d.word;                 // 교재__과__단어 (같은 과 이름이 다른 교재에 있어도 구분)
       const old = P.words.find(w => w.id === id);
-      return { id, lesson, word: d.word, pinyin: d.pinyin.replace(/\s+/g, ""), meaning: d.meaning.trim(), createdAt: old ? old.createdAt : Date.now(), order: old ? old.order : base + i + 1 };
+      return { id, book, lesson, word: d.word, pinyin: d.pinyin.replace(/\s+/g, ""), meaning: d.meaning.trim(), createdAt: old ? old.createdAt : Date.now(), order: old ? old.order : base + i + 1 };
     });
     try {
       await DB.saveWords(list);
@@ -122,30 +125,37 @@
     } catch (e) { console.error(e); Util.toast("저장 실패: " + (e.code || e.message), "bad"); }
   };
 
+  const bookName = b => b || "교재 미지정";
+
   function renderWordList() {
-    const dl = $("#lessonList"); dl.innerHTML = "";
-    [...new Set(P.words.map(w => w.lesson))].sort(Util.nat).forEach(l => { const o = document.createElement("option"); o.value = l; dl.appendChild(o); });
+    const fill = (id, vals) => { const dl = $(id); dl.innerHTML = ""; vals.forEach(v => { const o = document.createElement("option"); o.value = v; dl.appendChild(o); }); };
+    fill("#bookList", [...new Set(P.words.map(w => w.book || "").filter(Boolean))].sort(Util.nat));
+    fill("#lessonList", [...new Set(P.words.map(w => w.lesson))].sort(Util.nat));
     const box = $("#wordList"); box.innerHTML = "";
     if (!P.words.length) { box.innerHTML = '<p class="muted">아직 등록된 단어가 없어요.</p>'; return; }
-    [...new Set(P.words.map(w => w.lesson))].sort(Util.nat).forEach(l => {
-      const h = document.createElement("h3"); h.textContent = l; box.appendChild(h);
-      const wrap = document.createElement("div"); wrap.className = "tscroll"; wrap.style.maxHeight = "none";
-      const t = document.createElement("table"); t.className = "t";
-      t.innerHTML = "<tr><th>단어</th><th>병음</th><th>뜻</th><th>학습 시도</th><th></th></tr>";
-      P.words.filter(w => w.lesson === l).sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(w => {
-        const n = P.attempts.filter(a => a.wordId === w.id).length;
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td style="font-family:var(--hanzi);font-size:1.2rem">${Util.esc(w.word)}</td><td>${Util.esc(w.pinyin)}</td><td>${Util.esc(w.meaning)}</td><td>${n}</td>
-          <td><button class="btn sm">🔊</button> <button class="btn sm danger">삭제</button></td>`;
-        const [b1, b2] = $$("button", tr);
-        b1.onclick = () => TTS.speak(w.word);
-        b2.onclick = async () => {
-          if (!confirm(`'${w.word}' 단어를 학생 화면에서 삭제할까요?\n(이미 쌓인 학습 기록은 그대로 남습니다.)`)) return;
-          await DB.deleteWord(w.id); await loadAll();
-        };
-        t.appendChild(tr);
+    [...new Set(P.words.map(w => w.book || ""))].sort(Util.nat).forEach(b => {
+      const bh = document.createElement("h2"); bh.textContent = "📖 " + bookName(b); bh.style.marginTop = "18px"; box.appendChild(bh);
+      const inBook = P.words.filter(w => (w.book || "") === b);
+      [...new Set(inBook.map(w => w.lesson))].sort(Util.nat).forEach(l => {
+        const h = document.createElement("h3"); h.textContent = l; box.appendChild(h);
+        const wrap = document.createElement("div"); wrap.className = "tscroll"; wrap.style.maxHeight = "none";
+        const t = document.createElement("table"); t.className = "t";
+        t.innerHTML = "<tr><th>단어</th><th>병음</th><th>뜻</th><th>학습 시도</th><th></th></tr>";
+        inBook.filter(w => w.lesson === l).sort((a, b2) => (a.order || 0) - (b2.order || 0)).forEach(w => {
+          const n = P.attempts.filter(a => a.wordId === w.id).length;
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td style="font-family:var(--hanzi);font-size:1.2rem">${Util.esc(w.word)}</td><td>${Util.esc(w.pinyin)}</td><td>${Util.esc(w.meaning)}</td><td>${n}</td>
+            <td><button class="btn sm">🔊</button> <button class="btn sm danger">삭제</button></td>`;
+          const [b1, b2b] = $$("button", tr);
+          b1.onclick = () => TTS.speak(w.word);
+          b2b.onclick = async () => {
+            if (!confirm(`'${w.word}' 단어를 학생 화면에서 삭제할까요?\n(이미 쌓인 학습 기록은 그대로 남습니다.)`)) return;
+            await DB.deleteWord(w.id); await loadAll();
+          };
+          t.appendChild(tr);
+        });
+        wrap.appendChild(t); box.appendChild(wrap);
       });
-      wrap.appendChild(t); box.appendChild(wrap);
     });
   }
 
@@ -164,10 +174,11 @@
 
   function readFilters(prefix) {
     const v = id => { const e = $("#" + prefix + id); return e ? e.value : ""; };
-    return { lesson: v("Lesson"), word: v("Word"), student: v("Student"), mode: v("Mode"), consent: v("Consent"), from: v("From"), to: v("To") };
+    return { book: v("Book"), lesson: v("Lesson"), word: v("Word"), student: v("Student"), mode: v("Mode"), consent: v("Consent"), from: v("From"), to: v("To") };
   }
   function applyFilters(f) {
     return P.attempts.filter(a => {
+      if (f.book && (f.book === "__none__" ? a.book : a.book !== f.book)) return false;
       if (f.lesson && a.lesson !== f.lesson) return false;
       if (f.word && a.wordId !== f.word) return false;
       if (f.student && a.studentId !== f.student) return false;
@@ -181,10 +192,29 @@
   function filterBlock(prefix, container, onchange, withDates, defMode) {
     const prev = readFilters(prefix);
     container.innerHTML = "";
-    const lessons = uniq(P.attempts.map(a => a.lesson));
-    mkSelect(prefix + "Lesson", "과", [["", "전체"], ...lessons.map(l => [l, l])], container, onchange, prev.lesson);
-    const ws = new Map(); P.attempts.forEach(a => ws.set(a.wordId, a.lesson + " · " + a.word));
-    mkSelect(prefix + "Word", "단어", [["", "전체"], ...[...ws.entries()].sort((a, b) => Util.nat(a[1], b[1]))], container, onchange, prev.word);
+    const bk = a => a.book || "";
+    const books = [...new Set(P.attempts.map(bk))].sort(Util.nat);
+    const NONE = "__none__";
+    const selBook = mkSelect(prefix + "Book", "교재", [["", "전체"], ...books.map(b => [b === "" ? NONE : b, bookName(b)])], container, () => { refill(); onchange(); }, prev.book);
+    const selLesson = mkSelect(prefix + "Lesson", "과", [["", "전체"]], container, () => { refill(); onchange(); }, "");
+    const selWord = mkSelect(prefix + "Word", "단어", [["", "전체"]], container, onchange, "");
+    // 교재를 고르면 그 교재의 과만, 과까지 고르면 그 과의 단어만 보이게
+    function refill(wantLesson) {
+      const b = selBook.value;
+      const inBook = P.attempts.filter(a => !b || (b === NONE ? !a.book : a.book === b));
+      const wanted = wantLesson !== undefined ? wantLesson : selLesson.value;
+      const lessonVal = wanted && inBook.some(a => a.lesson === wanted) ? wanted : "";
+      const lessons = uniq(inBook.map(a => a.lesson));
+      selLesson.innerHTML = ""; [["", "전체"], ...lessons.map(l => [l, l])].forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; selLesson.appendChild(o); });
+      selLesson.value = lessonVal;
+      const inLesson = inBook.filter(a => !selLesson.value || a.lesson === selLesson.value);
+      const ws = new Map(); inLesson.forEach(a => ws.set(a.wordId, a.lesson + " · " + a.word));
+      const wordVal = selWord.value && ws.has(selWord.value) ? selWord.value : "";
+      selWord.innerHTML = ""; [["", "전체"], ...[...ws.entries()].sort((a, c) => Util.nat(a[1], c[1]))].forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; selWord.appendChild(o); });
+      selWord.value = wordVal;
+    }
+    refill(prev.lesson);
+    if (prev.word && [...selWord.options].some(o => o.value === prev.word)) selWord.value = prev.word;
     mkSelect(prefix + "Student", "학습자", [["", "전체"], ...uniq(P.attempts.map(a => a.studentId)).map(s => [s, s])], container, onchange, prev.student);
     mkSelect(prefix + "Mode", "연습 유형", [["", "전체"], ["blank", "빈칸쓰기"], ["trace", "따라쓰기"]], container, onchange, prev.mode || defMode || "");
     mkSelect(prefix + "Consent", "연구 동의", [["", "전체"], ["yes", "동의자만"]], container, onchange, prev.consent);
@@ -198,7 +228,7 @@
   }
 
   /* ---- 열 순서·표시 설정 (브라우저에 저장, 엑셀 열 순서에도 적용) ---- */
-  const DEFAULT_ORDER = ["학습자ID", "학습날짜", "과", "학습단어", "연습유형", "연습횟수(유형별)", "전체연습회차", "획순다시보기횟수", "다음획힌트횟수", "소요시간(초)",
+  const DEFAULT_ORDER = ["학습자ID", "학습날짜", "교재명", "과", "학습단어", "연습유형", "연습횟수(유형별)", "전체연습회차", "획순다시보기횟수", "다음획힌트횟수", "소요시간(초)",
     "획수오류", "획순오류", "획시작위치오류", "자형오류", "획수점수", "획순점수", "획시작위치점수", "자형점수", "최종점수"];
   const allKeys = () => Object.keys(Export.attemptRow({}, {}));
   function loadCols() {
@@ -206,6 +236,7 @@
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem("prof_cols")); } catch (e) { /* 기본값 */ }
     let order = saved && Array.isArray(saved.order) ? saved.order.filter(k => keys.includes(k)) : DEFAULT_ORDER.filter(k => keys.includes(k));
+    if (saved && !order.includes("교재명") && keys.includes("교재명")) { const i = order.indexOf("과"); order.splice(i >= 0 ? i : order.length, 0, "교재명"); }   // 새 열은 '과' 앞에
     keys.forEach(k => { if (!order.includes(k)) order.push(k); });                    // 새로 생긴 열은 뒤에 추가
     const hidden = saved && Array.isArray(saved.hidden) ? new Set(saved.hidden) : new Set(keys.filter(k => !DEFAULT_ORDER.includes(k)));
     return { order, hidden };

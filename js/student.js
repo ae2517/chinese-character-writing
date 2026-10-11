@@ -217,27 +217,47 @@
     $("#syncInfo").textContent = n ? `⚠️ 아직 서버에 저장되지 않은 기록이 ${n}건 있어요. 인터넷에 연결되면 자동으로 저장됩니다.` : "";
   }
 
+  const bookOf = w => w.book || "";
+  const bookLabel = b => b || "교재 미지정";
+
   async function loadWords() {
     try { st.words = await DB.listWords(); }
     catch (e) { console.error(e); Util.toast("단어 목록을 불러오지 못했어요.", "bad"); st.words = []; }
-    const lessons = [...new Set(st.words.map(w => w.lesson))].sort(Util.nat);
-    if (!st.lesson || !lessons.includes(st.lesson)) {
+    const books = [...new Set(st.words.map(bookOf))];
+    if (st.book == null || !books.includes(st.book)) {
       const latest = st.words.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+      st.book = latest ? bookOf(latest) : null;
       st.lesson = latest ? latest.lesson : null;
     }
-    renderHome(lessons);
+    renderHome();
   }
 
-  function renderHome(lessons) {
+  /** 교재(대분류) → 과(소분류) → 단어 */
+  function renderHome() {
+    const books = [...new Set(st.words.map(bookOf))].sort(Util.nat);
+    const bc = $("#bookChips"); bc.innerHTML = "";
+    bc.classList.toggle("hidden", !books.some(b => b !== ""));      // 교재명이 하나도 없으면 교재 줄은 숨김
+    books.forEach(b => {
+      const btn = document.createElement("button");
+      btn.className = "chip" + (b === st.book ? " on" : ""); btn.textContent = "📖 " + bookLabel(b);
+      btn.onclick = () => { st.book = b; st.lesson = null; renderHome(); };
+      bc.appendChild(btn);
+    });
+    const inBook = st.words.filter(w => bookOf(w) === st.book);
+    const lessons = [...new Set(inBook.map(w => w.lesson))].sort(Util.nat);
+    if (!lessons.includes(st.lesson)) {
+      const latest = inBook.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+      st.lesson = latest ? latest.lesson : (lessons[0] || null);
+    }
     const chips = $("#lessonChips"); chips.innerHTML = "";
     lessons.forEach(l => {
       const b = document.createElement("button");
       b.className = "chip" + (l === st.lesson ? " on" : ""); b.textContent = l;
-      b.onclick = () => { st.lesson = l; renderHome(lessons); };
+      b.onclick = () => { st.lesson = l; renderHome(); };
       chips.appendChild(b);
     });
     const grid = $("#wordGrid"); grid.innerHTML = "";
-    const list = st.words.filter(w => w.lesson === st.lesson).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const list = inBook.filter(w => w.lesson === st.lesson).sort((a, b) => (a.order || 0) - (b.order || 0));
     $("#noWords").classList.toggle("hidden", st.words.length > 0);
     const P = prog();
     list.forEach(w => {
@@ -256,7 +276,7 @@
   }
 
   /* ============ 연습 ============ */
-  $("#btnBack").onclick = () => { abortRound(); show("viewHome"); renderHome([...new Set(st.words.map(w => w.lesson))].sort(Util.nat)); };
+  $("#btnBack").onclick = () => { abortRound(); show("viewHome"); renderHome(); };
   $("#btnSpeak").onclick = () => TTS.speak(st.word.word);
   $("#btnSpeak2").onclick = () => TTS.speak(st.word.word);
   $$(".stagebtn").forEach(b => b.onclick = () => startRound(b.dataset.mode));
@@ -269,7 +289,7 @@
 
   /** 지금 과의 단어 목록(화면에 보이는 순서)에서 현재 단어의 다음 단어 */
   function nextWordOf(w) {
-    const list = st.words.filter(x => x.lesson === w.lesson).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const list = st.words.filter(x => (x.book || "") === (w.book || "") && x.lesson === w.lesson).sort((a, b) => (a.order || 0) - (b.order || 0));
     const i = list.findIndex(x => x.id === w.id);
     return i >= 0 && i < list.length - 1 ? list[i + 1] : null;
   }
@@ -320,7 +340,7 @@
     const boxes = $("#boxes");
     boxes.innerHTML = "";
     boxes.style.setProperty("--rows", Math.min(st.chars.length, window.innerWidth >= 700 ? 4 : 2));
-    R = { mode, token, ents: [], events: [], log: [], cur: 0, undo: 0, hints: 0, replays: 0, firstPen: null, enabledAt: null, submitted: false, busy: false, skip: false };
+    R = { mode, token, ents: [], events: [], log: [], reasons: [], cur: 0, undo: 0, hints: 0, replays: 0, firstPen: null, enabledAt: null, submitted: false, busy: false, skip: false };
     st.chars.forEach((c, i) => {
       const wrap = document.createElement("div");
       wrap.className = "boxwrap";
@@ -423,11 +443,14 @@
     let sev = "ok", title = "", lines = [];
     const sNo = ent.canvas.length + 1;
     let matched = -1;
+    const where = (R.ents.length > 1 ? `${c + 1}번째 글자 ` : "") + `'${ent.ch}' ${sNo}번째 획`;
+    const why = (cat, text) => R.reasons.push({ cat, text: `${where}: ${text}`, evt });
 
     if (ent.canvas.length >= ent.E) {
       evt.over = 1; sev = "bad";
       title = `❌ 획수 오류`;
       lines.push(`'${ent.ch}'은(는) ${ent.E}획인데 획이 더 많아요. ↩ 되돌리기로 틀린 획을 지우고 확인해 보세요.`);
+      why("count", `정답은 ${ent.E}획인데 ${ent.E}획을 다 쓴 뒤에 획을 더 썼어요`);
     } else {
       const used = new Set(ent.canvas.filter(x => x.matched >= 0).map(x => x.matched));
       const cands = [];
@@ -443,12 +466,14 @@
         evt.unm = 1; sev = "bad"; title = "❌ 자형 오류 (모양)";
         lines.push(`어느 획과도 닮지 않았어요. 지금 써야 할 획은 ${k + 1}번째, ${nameK}이에요.`);
         ent.box.flash(k); ent.box.marker(ent.box.meds[k][0]);
+        why("shape", `어느 획과도 닮지 않았어요 (지금 써야 할 획은 ${k + 1}번째 ${nameK})`);
       } else {
         const nameM = Eval.classify(ent.box.meds[matched]).ko;
         let form = false, flow = false, flashIdx = -1, markPt = null;
         if (r.orderErr) {
           evt.ord = 1; flow = true; flashIdx = k;
           lines.push(`획순 오류: 지금 써야 할 획은 ${k + 1}번째, ${nameK}이에요. 방금 쓴 획은 ${matched + 1}번째, ${nameM}이에요.`);
+          why("order", `${k + 1}번째 획 [${nameK}]을(를) 써야 하는데 ${matched + 1}번째 획 [${nameM}]을(를) 먼저 썼어요`);
         }
         if (r.startErr) {
           evt.start = 1; evt.startKind = r.startKind; flow = true;
@@ -457,21 +482,25 @@
           lines.push(r.startKind === "dir"
             ? `시작 위치 오류: 방향이 반대예요. ${Eval.region(ent.box.meds[matched][0])}에서 시작해서 반대쪽으로 쓰세요.`
             : `시작 위치 오류: 이 획은 ${Eval.region(r.expStart)}에서 시작해야 해요.`);
+          why("start", r.startKind === "dir" ? `방향이 반대예요 (${Eval.region(ent.box.meds[matched][0])}에서 시작해야 해요)` : `${Eval.region(r.expStart)}에서 시작해야 하는데 다른 곳에서 시작했어요`);
         }
         if (r.shapeBad) {
           evt.shp = 1; form = true; if (flashIdx < 0) flashIdx = matched;
           lines.push(r.userType.id !== r.expType.id
             ? `자형 오류(모양): ${r.expType.ko}처럼 써야 하는데 ${r.userType.ko}처럼 보여요.`
             : `자형 오류(모양): ${r.expType.ko}의 굽은 정도·꺾임이 달라요. 연한 정답 획을 확인해 보세요.`);
+          why("shape", r.userType.id !== r.expType.id ? `모양: ${r.expType.ko}처럼 써야 하는데 ${r.userType.ko}처럼 보여요` : `모양: ${r.expType.ko}의 굽은 정도·꺾임이 달라요`);
         }
         if (r.posErr) {
           evt.pos = 1; form = true; if (flashIdx < 0) flashIdx = matched;
           const dir = Math.abs(r.dx) > Math.abs(r.dy) ? (r.dx > 0 ? "왼쪽" : "오른쪽") : (r.dy > 0 ? "위쪽" : "아래쪽");
           lines.push(`자형 오류(위치): 획이 ${dir}으로 치우쳐 있어요. 칸의 십자선을 기준으로 위치를 맞춰 보세요.`);
+          why("shape", `위치: 획이 ${dir}으로 치우쳤어요`);
         }
         if (r.sizeErr) {
           evt.siz = 1; form = true; if (flashIdx < 0) flashIdx = matched;
           lines.push(`자형 오류(크기): 획이 정답보다 너무 ${r.sizeDir === "long" ? "길어요" : "짧아요"}.`);
+          why("shape", `크기: 획이 정답보다 너무 ${r.sizeDir === "long" ? "길어요" : "짧아요"}`);
         }
         if (flashIdx >= 0) ent.box.flash(flashIdx);
         if (markPt) ent.box.marker(markPt);
@@ -532,6 +561,7 @@
     const now = performance.now();
     const S = R.ents.reduce((s, e) => s + e.E, 0);
     const missing = R.ents.reduce((s, e) => s + Math.max(0, e.E - e.canvas.length), 0);
+    R.ents.forEach((e, i) => { const m = e.E - e.canvas.length; if (m > 0) R.reasons.push({ cat: "count", text: `${R.ents.length > 1 ? `${i + 1}번째 글자 ` : ""}'${e.ch}': ${e.E}획 중 ${e.canvas.length}획만 써서 ${m}획이 모자라요`, evt: null }); });
     const ev = R.events;
     const over = ev.filter(e => e.over).length;
     const evalEv = ev.filter(e => !e.over);
@@ -559,7 +589,7 @@
     const d = new Date();
     const att = {
       id: Util.uid("a"), studentId: st.user.id, date: Util.today(), time: Util.clock(d), ts: d.getTime(),
-      lesson: w.lesson, wordId: w.id, word: w.word, pinyin: w.pinyin, meaning: w.meaning,
+      book: w.book || "", lesson: w.lesson, wordId: w.id, word: w.word, pinyin: w.pinyin, meaning: w.meaning,
       mode: R.mode, round, modeRound: isBlank ? p.blank : p.trace, seq: p.total,
       countErr, missingStrokes: missing, extraStrokes: over,
       orderErr: ordErr, startErr,
@@ -589,7 +619,21 @@
 
   function renderResult(a, prev) {
     const box = $("#result");
-    const bar = (label, v) => `<div class="bar"><span>${label}</span><div class="tr"><div class="fi" style="width:${v}%"></div></div><b>${v}</b></div>`;
+    // 항목별 점수 + '왜 이 점수인지' 이유
+    const S = a.expectedStrokes;
+    const why = (cat, basis) => {
+      const items = R.reasons.filter(r => r.cat === cat);
+      const li = items.slice(0, 10).map(r => `<li>${Util.esc(r.text)}${r.evt && r.evt.undone ? ' <span class="muted">(되돌려서 다시 씀)</span>' : ""}</li>`).join("");
+      const more = items.length > 10 ? `<li class="muted">…외 ${items.length - 10}건</li>` : "";
+      return `<ul class="why"><li class="basis">${Util.esc(basis)}</li>${li || '<li class="good">✔ 이 항목은 감점이 없었어요.</li>'}${more}</ul>`;
+    };
+    const bar = (label, v, basis, cat) => `<div class="barwrap"><div class="bar"><span>${label}</span><div class="tr"><div class="fi" style="width:${v}%"></div></div><b>${v}</b></div>${why(cat, basis)}</div>`;
+    const bars = [
+      bar("획수", a.scoreCount, `정답 ${S}획 기준: 더 쓴 획 ${a.extraStrokes}회 + 모자란 획 ${a.missingStrokes}획 = 오류 ${a.countErr}회 → 100 × (1 − ${a.countErr}/${S}) = ${a.scoreCount}점`, "count"),
+      bar("획순", a.scoreOrder, `순서가 틀린 획 ${a.orderErr}회 → 100 × (1 − ${a.orderErr}/${S}) = ${a.scoreOrder}점`, "order"),
+      bar("시작 위치", a.scoreStart, `시작점·방향이 틀린 획 ${a.startErr}회 → 100 × (1 − ${a.startErr}/${S}) = ${a.scoreStart}점`, "start"),
+      bar("자형", a.scoreShape, `획마다 모양·위치·크기가 정답과 얼마나 비슷한지(0~100)를 매겨 평균 → ${a.scoreShape}점 (자형 오류 ${a.formErr}회: 모양 ${a.formShapeErr} · 위치 ${a.formPosErr} · 크기 ${a.formSizeErr})`, "shape")
+    ].join("");
     const delta = prev == null ? "" : (a.finalScore - prev >= 0 ? `<span class="pill ok">지난 회차 ${prev} → ${a.finalScore} (▲${Util.round1(a.finalScore - prev)})</span>` : `<span class="pill bad">지난 회차 ${prev} → ${a.finalScore} (▼${Util.round1(prev - a.finalScore)})</span>`);
     const p = prog()[st.word.id] || {};
     const nextRound = (p.blank || 0) + 1;
@@ -597,7 +641,6 @@
       ["획수 오류", a.countErr], ["획순 오류", a.orderErr], ["시작 위치 오류", a.startErr],
       ["자형 오류", a.formErr]
     ].map(([n, v]) => `<span class="pill ${v ? "bad" : "ok"}">${n} ${v}</span>`).join("");
-    const logs = [...new Set(R.log)].slice(0, 8);
     const tips = [];
     if (a.orderErr) tips.push("획순이 헷갈리면 ① 단계의 애니메이션을 다시 보세요. (위→아래, 왼→오른쪽, 가로→세로 순서가 기본)");
     if (a.startErr) tips.push("획을 시작하는 점이 중요해요. 연한 글자의 획 시작점을 먼저 확인하고 쓰세요.");
@@ -606,9 +649,9 @@
     box.innerHTML = `
       <h2>${a.mode === "trace" ? "따라쓰기" : "빈칸쓰기"} ${a.modeRound}회차 결과 <span class="muted small" style="font-weight:500">(전체 ${a.seq}번째 연습)</span></h2>
       <div class="row" style="align-items:flex-end"><div class="bigscore">${a.finalScore}<span style="font-size:1.2rem">점</span></div><div>${delta}<div class="muted small">소요 시간 ${a.durationSec}초 · 되돌리기 ${a.undoCount}회 · 획순 다시 보기 ${a.replayCount || 0}회 · 다음 획 힌트 ${a.hintCount}회</div></div></div>
-      <div class="bars">${bar("획수", a.scoreCount)}${bar("획순", a.scoreOrder)}${bar("시작 위치", a.scoreStart)}${bar("자형", a.scoreShape)}</div>
+      <div class="bars">${bars}</div>
       <div>${pills}</div>
-      ${logs.length ? `<details open style="margin-top:10px"><summary><b>틀린 부분</b></summary><ul>${logs.map(l => `<li class="small">${Util.esc(l)}</li>`).join("")}</ul></details>` : `<p><b>🎉 모든 획이 정확했어요!</b></p>`}
+      ${R.reasons.length ? "" : "<p><b>🎉 모든 획이 정확했어요!</b></p>"}
       ${tips.length ? `<div class="small muted"><b>다음엔 이렇게:</b><ul>${tips.map(t => `<li>${Util.esc(t)}</li>`).join("")}</ul></div>` : ""}
       <p id="saveState" class="small muted">저장 중…</p>
       <div class="row">

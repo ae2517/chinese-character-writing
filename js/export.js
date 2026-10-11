@@ -6,7 +6,7 @@ const Export = (() => {
   function attemptRow(a, s) {
     s = s || {};
     return {
-      "학습자ID": a.studentId, "학습날짜": a.date, "학습시각": a.time, "과": a.lesson, "학습단어": a.word, "병음": a.pinyin, "뜻": a.meaning,
+      "학습자ID": a.studentId, "학습날짜": a.date, "학습시각": a.time, "교재명": a.book ?? "", "과": a.lesson, "학습단어": a.word, "병음": a.pinyin, "뜻": a.meaning,
       "연습유형": modeKo(a.mode), "연습횟수(유형별)": a._mr, "전체연습회차": a._ov,
       "획수오류": a.countErr, "획순오류": a.orderErr, "획시작위치오류": a.startErr, "자형오류": a.formErr,
       "자형오류_모양": a.formShapeErr, "자형오류_위치": a.formPosErr, "자형오류_크기": a.formSizeErr,
@@ -24,13 +24,13 @@ const Export = (() => {
   function summaryRows(attempts) {
     const g = new Map();
     attempts.forEach(a => {
-      const key = [a.lesson, a.word, a.mode, a._mr].join("|");
+      const key = [a.book || "", a.lesson, a.word, a.mode, a._mr].join("|");
       if (!g.has(key)) g.set(key, []);
       g.get(key).push(a);
     });
     const m = (arr, f) => { const v = arr.map(f); return Util.round1(v.reduce((s, x) => s + x, 0) / v.length); };
     return [...g.entries()].map(([k, arr]) => ({
-      "과": arr[0].lesson, "학습단어": arr[0].word, "연습유형": modeKo(arr[0].mode), "연습횟수(유형별)": arr[0]._mr, "시도수(N)": arr.length,
+      "교재명": arr[0].book || "", "과": arr[0].lesson, "학습단어": arr[0].word, "연습유형": modeKo(arr[0].mode), "연습횟수(유형별)": arr[0]._mr, "시도수(N)": arr.length,
       "평균소요시간(초)": m(arr, a => a.durationSec),
       "평균획순다시보기횟수": m(arr, a => a.replayCount || 0), "평균다음획힌트횟수": m(arr, a => a.hintCount || 0), "평균획수오류": m(arr, a => a.countErr), "평균획순오류": m(arr, a => a.orderErr),
       "평균획시작위치오류": m(arr, a => a.startErr), "평균자형오류": m(arr, a => a.formErr),
@@ -46,7 +46,7 @@ const Export = (() => {
       const a = idx.get(d.id);
       if (!a) return;
       (d.strokes || []).forEach(s => rows.push({
-        "시도ID": a.id, "학습자ID": a.studentId, "학습날짜": a.date, "과": a.lesson, "학습단어": a.word,
+        "시도ID": a.id, "학습자ID": a.studentId, "학습날짜": a.date, "교재명": a.book ?? "", "과": a.lesson, "학습단어": a.word,
         "연습유형": modeKo(a.mode), "연습횟수(유형별)": a._mr, "전체연습회차": a._ov,
         "글자": s.ch, "글자내_쓴순서": s.n, "그때_써야할획": s.k, "인식된정답획": s.m,
         "획수초과": s.over, "획순오류": s.ord, "시작위치오류": s.start, "시작오류유형": s.startKind === "dir" ? "방향반대" : s.startKind === "start" ? "시작점다름" : "",
@@ -70,6 +70,7 @@ const Export = (() => {
       ["로그인기록", "학생별 접속(로그인·가입·자동로그인) 시각과 기기 정보."],
       [],
       ["변수", "정의"],
+      ["교재명", "교재명(대분류). 이 항목을 넣기 전의 기록은 빈칸."],
       ["연습유형", "따라쓰기(연한 회색 글자 따라 쓰기) / 빈칸쓰기(기억으로 쓰기)"],
       ["연습횟수(유형별)", "같은 학습자·같은 단어에서 그 연습유형(따라쓰기 또는 빈칸쓰기)의 몇 번째 연습인지. 따라쓰기 1,2,3… 와 빈칸쓰기 1,2,3… 을 각각 셈."],
       ["전체연습회차", "같은 학습자·같은 단어에서 따라쓰기와 빈칸쓰기를 모두 합쳐 몇 번째 연습인지(시간순)."],

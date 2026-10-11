@@ -189,3 +189,14 @@ html.practice #viewPractice { flex: 1 1 auto; min-height: 0; overflow-y: auto; o
 .colrow label { flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .colrow.off { opacity: .5; }
 .colrow .no { width: 1.6em; text-align: right; color: var(--sub); font-variant-numeric: tabular-nums; }
+
+/* 항목별 점수 이유 */
+.bars { gap: 14px; }
+.barwrap .why { list-style: none; margin: 4px 0 0; padding: 0 0 0 98px; font-size: .84rem; color: #3b4656; }
+.barwrap .why li { margin: 2px 0; }
+.barwrap .why li.basis { color: var(--sub); }
+.barwrap .why li.good { color: var(--ok); }
+@media (max-width: 560px) { .barwrap .why { padding-left: 4px; } }
+/* 스마트폰: 쓰기 칸 밖은 세로 스크롤 허용, 쓰기 칸 위는 스크롤 금지 */
+.writezone .pbar { flex-wrap: nowrap; }
+html.practice #viewPractice { touch-action: pan-y; }
