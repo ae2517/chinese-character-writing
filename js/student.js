@@ -477,7 +477,7 @@
       matched = r.matched;
       const nameK = Eval.classify(ent.box.meds[k]).ko;
       evt.k = k + 1; evt.m = matched + 1;
-      evt.sim = Math.round(r.sim * 10) / 10; evt.sd = Math.round(r.shapeDist); evt.pd = Math.round(r.posDist); evt.std = Math.round(r.startDist);
+      evt.sim = Math.round(r.sim * 10) / 10; evt.sd = Math.round(r.shapeDist); evt.pd = Math.round(r.posDist); evt.std = Math.round(r.startDist); evt.sr = Math.round(r.sizeRatio * 100) / 100;
 
       if (r.unmatched) {
         evt.unm = 1; sev = "bad"; title = "❌ 자형 오류 (모양)";
@@ -638,11 +638,30 @@
     const box = $("#result");
     // 항목별 점수 + '왜 이 점수인지' 이유
     const S = a.expectedStrokes;
+    // 오류로 판정되지는 않았지만 정답과 조금씩 달라 깎인 획(유사도가 낮은 순서로 최대 3개)
+    const soft = () => {
+      const Lz = CFG.leniency || 1;
+      return R.events.filter(e => !e.over && !e.unm && !(e.shp || e.pos || e.siz) && e.sim < 92).sort((x, y) => x.sim - y.sim).slice(0, 3).map(e => {
+        const sS = Math.max(0, 1 - e.sd / (200 * Lz)), sP = Math.max(0, 1 - e.pd / (300 * Lz));
+        const q = e.sr >= 1 ? 1 / e.sr : e.sr, sZ = Math.max(0, Math.min(1, (q + (Lz - 1) * 0.4) / (1 + (Lz - 1) * 0.4)));
+        const main = [["모양", 0.5 * (1 - sS)], ["위치", 0.25 * (1 - sP)], ["크기", 0.25 * (1 - sZ)]].sort((x, y) => y[1] - x[1])[0][0];
+        const ent = R.ents[e.c];
+        return `${R.ents.length > 1 ? `${e.c + 1}번째 글자 ` : ""}'${ent.ch}' ${e.n}번째 획: 오류로 표시될 정도는 아니지만 정답과 조금 달라요 (이 획의 유사도 ${Math.round(e.sim)}점, 주로 ${main} 차이)`;
+      });
+    };
     const why = (cat, basis) => {
       const items = R.reasons.filter(r => r.cat === cat);
       const li = items.slice(0, 10).map(r => `<li>${Util.esc(r.text)}${r.evt && r.evt.undone ? ' <span class="muted">(되돌려서 다시 씀)</span>' : ""}</li>`).join("");
       const more = items.length > 10 ? `<li class="muted">…외 ${items.length - 10}건</li>` : "";
-      return `<ul class="why"><li class="basis">${Util.esc(basis)}</li>${li || '<li class="good">✔ 이 항목은 감점이 없었어요.</li>'}${more}</ul>`;
+      let tail = "";
+      const sf = cat === "shape" ? soft() : [];
+      if (cat === "shape") {
+        tail = sf.map(t => `<li>${Util.esc(t)}</li>`).join("");
+        if (a.scoreShape < 100 && !items.length && !sf.length) tail = '<li>오류로 판정된 획은 없지만, 획마다 정답과 완전히 같지는 않아서 조금씩 깎였어요. (정답 중심선과 거의 같아야 100점이에요.)</li>';
+      }
+      const ok = !li && !tail ? '<li class="good">✔ 이 항목은 감점이 없었어요.</li>' : "";
+      const note = cat === "shape" && a.scoreShape < 100 && !items.length && sf.length ? '<li class="muted">※ 자형 점수는 오류 개수가 아니라 획마다 정답과 얼마나 비슷한지(0~100)를 평균 낸 값이라, 오류가 없어도 100점이 아닐 수 있어요.</li>' : "";
+      return `<ul class="why"><li class="basis">${Util.esc(basis)}</li>${li}${tail}${note}${ok}${more}</ul>`;
     };
     const bar = (label, v, basis, cat) => `<div class="barwrap"><div class="bar"><span>${label}</span><div class="tr"><div class="fi" style="width:${v}%"></div></div><b>${v}</b></div>${why(cat, basis)}</div>`;
     const bars = [
