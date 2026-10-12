@@ -83,6 +83,42 @@ const DB = (() => {
     await updateDoc(doc(fs, "students", id), patch);
   }
 
+  /** 학생 탈퇴 처리. withData=false: 계정·전화번호·진행 상황만 삭제(학습 기록 유지), true: 학습 기록·로그인 기록까지 모두 삭제 */
+  async function deleteStudent(id, withData) {
+    if (demo) {
+      const stu = L.get("demo_students", {}); delete stu[id]; L.set("demo_students", stu);
+      const pr = L.get("demo_private", {}); const h = pr[id]; delete pr[id]; L.set("demo_private", pr);
+      const idx = L.get("demo_phoneidx", {}); if (h) delete idx[h]; Object.keys(idx).forEach(k => { if (idx[k] === id) delete idx[k]; }); L.set("demo_phoneidx", idx);
+      const pg = L.get("demo_progress", {}); delete pg[id]; L.set("demo_progress", pg);
+      if (withData) {
+        L.set("demo_attempts", L.get("demo_attempts", []).filter(a => a.studentId !== id));
+        L.set("demo_strokes", L.get("demo_strokes", []).filter(a => a.studentId !== id));
+        L.set("demo_logins", L.get("demo_logins", []).filter(a => a.studentId !== id));
+      }
+      cache.attempts = []; cache.last = 0; cache.strokes = null;
+      return;
+    }
+    const refs = [];
+    const add = snap => snap.docs.forEach(x => refs.push(x.ref));
+    // 전화번호 색인은 해시를 알아야 지울 수 있으므로 studentPrivate 에서 먼저 읽음
+    const pv = await getDoc(doc(fs, "studentPrivate", id));
+    if (pv.exists() && pv.data().phoneHash) refs.push(doc(fs, "phoneIndex", pv.data().phoneHash));
+    refs.push(doc(fs, "studentPrivate", id));
+    add(await getDocs(query(collection(fs, "progress"), where("studentId", "==", id))));
+    if (withData) {
+      add(await getDocs(query(collection(fs, "attempts"), where("studentId", "==", id))));
+      add(await getDocs(query(collection(fs, "attemptStrokes"), where("studentId", "==", id))));
+      add(await getDocs(query(collection(fs, "logins"), where("studentId", "==", id))));
+    }
+    refs.push(doc(fs, "students", id));                    // 계정 문서는 마지막에 삭제 (중간에 실패하면 다시 시도할 수 있게)
+    for (let i = 0; i < refs.length; i += 400) {
+      const batch = writeBatch(fs);
+      refs.slice(i, i + 400).forEach(r => batch.delete(r));
+      await batch.commit();
+    }
+    cache.attempts = []; cache.last = 0; cache.strokes = null;
+  }
+
   /* ---------- 단어 ---------- */
   async function listWords() {
     if (demo) return L.get("demo_words", []);
@@ -219,7 +255,7 @@ const DB = (() => {
   }
 
   return {
-    demo, init, getStudent, createStudent, findIdByPhone, resetPasswordByPhone, listStudents, updateStudent,
+    demo, init, getStudent, createStudent, findIdByPhone, resetPasswordByPhone, listStudents, updateStudent, deleteStudent,
     listWords, saveWords, deleteWord,
     addAttempt, flushPending, pendingCount: () => pending().length,
     getProgress, saveProgress, addLogin, listLogins,

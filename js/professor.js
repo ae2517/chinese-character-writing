@@ -523,6 +523,30 @@
   }
 
   /* ============ ④ 학생 ============ */
+  /** 탈퇴 처리: 범위 선택 + 학습자 ID 다시 입력해야 삭제 버튼이 켜짐 */
+  function openDelete(s, attemptCount) {
+    $("#delWho").innerHTML = `학습자 ID <b>${Util.esc(s.id)}</b> (학습 기록 ${attemptCount}건)`;
+    $("#delConfirm").value = ""; $("#delGo").disabled = true;
+    $$("input[name=delScope]").forEach(r => { r.checked = r.value === "account"; });
+    $("#delModal").classList.remove("hidden");
+    $("#delConfirm").oninput = () => { $("#delGo").disabled = $("#delConfirm").value.trim() !== s.id; };
+    $("#delCancel").onclick = () => $("#delModal").classList.add("hidden");
+    $("#delGo").onclick = async () => {
+      const all = $("input[name=delScope]:checked").value === "all";
+      $("#delGo").disabled = true;
+      try {
+        await DB.deleteStudent(s.id, all);
+        $("#delModal").classList.add("hidden");
+        Util.toast(all ? `'${s.id}' 계정과 모든 학습 기록을 삭제했어요.` : `'${s.id}' 계정을 삭제했어요. (학습 기록은 남아 있어요)`, "ok");
+        await loadAll(true);
+      } catch (e) {
+        console.error(e);
+        Util.toast("삭제 실패: " + (e.code || e.message) + " (Firestore 규칙·교수 로그인을 확인하세요)", "bad");
+        $("#delGo").disabled = false;
+      }
+    };
+  }
+
   function renderStudents() {
     const t = $("#stuTbl");
     t.innerHTML = "<tr><th>ID</th><th>국적</th><th>성별</th><th>전공</th><th>학년</th><th>중국어(개월)</th><th>한자(개월)</th><th>친숙도</th><th>연구동의</th><th>가입일</th><th>시도 수</th><th>로그인 횟수</th><th>마지막 접속</th><th></th></tr>";
@@ -530,8 +554,10 @@
       const n = P.attempts.filter(a => a.studentId === s.id).length;
       const lg = (P.logins || []).filter(l => l.studentId === s.id).sort((a, b) => a.ts - b.ts);
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${Util.esc(s.id)}</td><td>${Util.esc(s.nationality)}</td><td>${Util.esc(s.gender)}</td><td>${Util.esc(s.major)}</td><td>${Util.esc(s.grade)}</td><td>${s.chineseMonths}</td><td>${s.hanziMonths}</td><td>${s.familiarity}</td><td>${s.consent ? "동의" : "비동의"}</td><td>${Util.esc(s.createdDate)}</td><td>${n}</td><td>${lg.length}</td><td>${lg.length ? Util.esc(lg[lg.length - 1].date + " " + lg[lg.length - 1].time) : "-"}</td><td><button class="btn sm">비밀번호 초기화</button></td>`;
-      $("button", tr).onclick = async () => {
+      tr.innerHTML = `<td>${Util.esc(s.id)}</td><td>${Util.esc(s.nationality)}</td><td>${Util.esc(s.gender)}</td><td>${Util.esc(s.major)}</td><td>${Util.esc(s.grade)}</td><td>${s.chineseMonths}</td><td>${s.hanziMonths}</td><td>${s.familiarity}</td><td>${s.consent ? "동의" : "비동의"}</td><td>${Util.esc(s.createdDate)}</td><td>${n}</td><td>${lg.length}</td><td>${lg.length ? Util.esc(lg[lg.length - 1].date + " " + lg[lg.length - 1].time) : "-"}</td><td><button class="btn sm">비밀번호 초기화</button> <button class="btn sm danger">탈퇴 처리</button></td>`;
+      const [btnReset, btnDel] = $$("button", tr);
+      btnDel.onclick = () => openDelete(s, n);
+      btnReset.onclick = async () => {
         const pw = prompt(`'${s.id}' 학생의 새 비밀번호(4자 이상)를 입력하세요.`);
         if (!pw) return;
         if (pw.length < 4) { Util.toast("4자 이상이어야 해요.", "warn"); return; }

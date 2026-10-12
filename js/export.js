@@ -16,7 +16,7 @@ const Export = (() => {
       "획수점수": a.scoreCount, "획순점수": a.scoreOrder, "획시작위치점수": a.scoreStart, "자형점수": a.scoreShape, "최종점수": a.finalScore,
       "국적": s.nationality ?? "", "성별": s.gender ?? "", "전공": s.major ?? "", "학년": s.grade ?? "",
       "중국어학습기간(개월)": s.chineseMonths ?? "", "한자학습기간(개월)": s.hanziMonths ?? "", "한자친숙도(1-5)": s.familiarity ?? "",
-      "연구동의": s.consent === true ? "동의" : s.consent === false ? "비동의" : "",
+      "연구동의": s.consent === true ? "동의" : s.consent === false ? "비동의" : (s.id ? "" : "계정삭제됨"),
       "시도ID": a.id
     };
   }
@@ -89,7 +89,7 @@ const Export = (() => {
       ["첫획까지시간(초)", "쓰기 화면이 열린 후 첫 획을 쓰기 시작할 때까지(생각 시간)"],
       ["채점 관대함", `leniency = ${APP_CONFIG.leniency} (config.js)`],
       ["한자친숙도", "자기평가 1(전혀 친숙하지 않다)~5(매우 친숙하다)"],
-      ["연구동의", "동의 / 비동의 — 연구 분석에는 '동의'만 사용하세요."]
+      ["연구동의", "동의 / 비동의 / 계정삭제됨 — 연구 분석에는 '동의'만 사용하세요. '계정삭제됨'은 학생 계정이 삭제되어 가입 정보와 동의 여부를 알 수 없는 기록입니다."]
     ];
   };
 
