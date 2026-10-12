@@ -99,9 +99,11 @@ const DB = (() => {
       L.set("demo_words", all);
       return;
     }
-    const batch = writeBatch(fs);
-    list.forEach(w => batch.set(doc(fs, "words", w.id), w));
-    await batch.commit();
+    for (let i = 0; i < list.length; i += 400) {          // 한 번에 최대 500건이라 400건씩 나눠 저장
+      const batch = writeBatch(fs);
+      list.slice(i, i + 400).forEach(w => batch.set(doc(fs, "words", w.id), w));
+      await batch.commit();
+    }
   }
   async function deleteWord(id) {
     if (demo) {

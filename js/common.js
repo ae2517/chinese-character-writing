@@ -29,6 +29,16 @@ const Util = {
     });
     return list;
   },
+  /** 단어 목록에서 교재명을 '교수가 정한 순서'(bookOrder)대로 정렬해 돌려줌. 순서가 없으면 이름순 */
+  sortBooks(words) {
+    const o = new Map();
+    words.forEach(w => {
+      const b = w.book || "";
+      const v = typeof w.bookOrder === "number" ? w.bookOrder : Infinity;
+      o.set(b, Math.min(o.has(b) ? o.get(b) : Infinity, v));
+    });
+    return [...o.keys()].sort((a, b) => (o.get(a) !== o.get(b) ? (o.get(a) < o.get(b) ? -1 : 1) : Util.nat(a, b)));
+  },
   uid(p = "a") {
     return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   },

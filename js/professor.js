@@ -117,7 +117,7 @@
     const list = ok.map((d, i) => {
       const old = P.words.find(w => (w.book || "") === book && w.lesson === lesson && w.word === d.word);
       const id = old ? old.id : clean(book) + "__" + clean(lesson) + "__" + d.word;      // 교재__과__단어 (같은 과 이름이 다른 교재에 있어도 구분)
-      return { id, book, lesson, word: d.word, pinyin: d.pinyin.replace(/\s+/g, ""), meaning: d.meaning.trim(), createdAt: old ? old.createdAt : Date.now(), order: old ? old.order : base + i + 1 };
+      return { id, book, bookOrder: orderForBook(book), lesson, word: d.word, pinyin: d.pinyin.replace(/\s+/g, ""), meaning: d.meaning.trim(), createdAt: old ? old.createdAt : Date.now(), order: old ? old.order : base + i + 1 };
     });
     try {
       await DB.saveWords(list);
@@ -128,6 +128,26 @@
   };
 
   const bookName = b => b || "교재 미지정";
+
+  /** 교재의 현재 순서값(없으면 맨 뒤에 새로 붙일 값) */
+  function orderForBook(book) {
+    const own = P.words.filter(w => (w.book || "") === book && typeof w.bookOrder === "number").map(w => w.bookOrder);
+    if (own.length) return Math.min(...own);
+    const all = P.words.filter(w => typeof w.bookOrder === "number").map(w => w.bookOrder);
+    return (all.length ? Math.max(...all) : 0) + 1;
+  }
+
+  /** 교재 순서 한 칸 위/아래로 */
+  async function moveBook(book, dir) {
+    const list = Util.sortBooks(P.words);
+    const i = list.indexOf(book), j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j], list[i]];
+    const pos = new Map(list.map((b, k) => [b, k + 1]));             // 1,2,3… 로 다시 매김
+    const changed = P.words.filter(w => w.bookOrder !== pos.get(w.book || "")).map(w => ({ ...w, bookOrder: pos.get(w.book || "") }));
+    try { await DB.saveWords(changed); await loadAll(); }
+    catch (e) { console.error(e); Util.toast("순서 저장 실패: " + (e.code || e.message), "bad"); }
+  }
 
   /** 한 단어 수정 저장. id 는 그대로 두어 학생들의 학습 기록·진행 상황이 끊기지 않게 함 */
   async function saveWordEdit(w, v) {
@@ -147,7 +167,8 @@
     }
     const moved = (w.book || "") !== v.book || w.lesson !== v.lesson;
     const order = moved ? P.words.filter(x => (x.book || "") === v.book && x.lesson === v.lesson).reduce((m, x) => Math.max(m, x.order || 0), 0) + 1 : w.order;
-    await DB.saveWords([{ ...w, ...v, order, updatedAt: Date.now() }]);
+    const bookOrder = (w.book || "") === v.book ? w.bookOrder : orderForBook(v.book);
+    await DB.saveWords([{ ...w, ...v, order, bookOrder, updatedAt: Date.now() }]);
     return true;
   }
 
@@ -165,21 +186,28 @@
     // 합치면서 같은 교재·과·단어가 겹치면 막음
     const clash = targets.find(w => P.words.some(x => !targets.includes(x) && (x.book || "") === (kind === "book" ? next : book) && x.lesson === (kind === "book" ? w.lesson : next) && x.word === w.word));
     if (clash) { Util.toast(`'${clash.word}' 단어가 이미 같은 위치에 있어서 합칠 수 없어요.`, "warn"); return; }
-    const list = targets.map(w => kind === "book" ? { ...w, book: next } : { ...w, lesson: next });
+    const mergedOrder = kind === "book" && exists ? orderForBook(next) : null;      // 이미 있는 교재로 합치면 그 교재의 순서를 따름
+    const list = targets.map(w => kind === "book" ? { ...w, book: next, ...(mergedOrder != null ? { bookOrder: mergedOrder } : {}) } : { ...w, lesson: next });
     try { await DB.saveWords(list); Util.toast(`${list.length}개 단어의 ${label}을(를) 바꿨어요.`, "ok"); await loadAll(); }
     catch (e) { console.error(e); Util.toast("저장 실패: " + (e.code || e.message), "bad"); }
   }
 
   function renderWordList() {
     const fill = (id, vals) => { const dl = $(id); dl.innerHTML = ""; vals.forEach(v => { const o = document.createElement("option"); o.value = v; dl.appendChild(o); }); };
-    fill("#bookList", [...new Set(P.words.map(w => w.book || "").filter(Boolean))].sort(Util.nat));
+    fill("#bookList", Util.sortBooks(P.words).filter(Boolean));
     fill("#lessonList", [...new Set(P.words.map(w => w.lesson))].sort(Util.nat));
     const box = $("#wordList"); box.innerHTML = "";
     if (!P.words.length) { box.innerHTML = '<p class="muted">아직 등록된 단어가 없어요.</p>'; return; }
-    [...new Set(P.words.map(w => w.book || ""))].sort(Util.nat).forEach(b => {
+    const bookList = Util.sortBooks(P.words);
+    bookList.forEach((b, bi) => {
       const bh = document.createElement("div"); bh.className = "row"; bh.style.marginTop = "18px";
-      bh.innerHTML = `<h2 style="margin:0">📖 ${Util.esc(bookName(b))}</h2><button class="btn sm">✏ ${b ? "교재명 수정" : "교재명 지정"}</button>`;
-      $("button", bh).onclick = () => renameGroup("book", b, "");
+      bh.innerHTML = `<h2 style="margin:0">📖 ${Util.esc(bookName(b))}</h2>
+        <button class="btn sm" ${bi === 0 ? "disabled" : ""} title="교재 순서를 위로" aria-label="교재 순서를 위로">▲</button>
+        <button class="btn sm" ${bi === bookList.length - 1 ? "disabled" : ""} title="교재 순서를 아래로" aria-label="교재 순서를 아래로">▼</button>
+        <button class="btn sm">✏ ${b ? "교재명 수정" : "교재명 지정"}</button>`;
+      const [up, down, ren] = $$("button", bh);
+      up.onclick = () => moveBook(b, -1); down.onclick = () => moveBook(b, 1);
+      ren.onclick = () => renameGroup("book", b, "");
       box.appendChild(bh);
       const inBook = P.words.filter(w => (w.book || "") === b);
       [...new Set(inBook.map(w => w.lesson))].sort(Util.nat).forEach(l => {
@@ -266,7 +294,8 @@
     const prev = readFilters(prefix);
     container.innerHTML = "";
     const bk = a => a.book || "";
-    const books = [...new Set(P.attempts.map(bk))].sort(Util.nat);
+    const inAttempts = new Set(P.attempts.map(bk));
+    const books = [...Util.sortBooks(P.words).filter(b => inAttempts.has(b)), ...[...inAttempts].filter(b => !P.words.some(w => (w.book || "") === b)).sort(Util.nat)];
     const NONE = "__none__";
     const selBook = mkSelect(prefix + "Book", "교재", [["", "전체"], ...books.map(b => [b === "" ? NONE : b, bookName(b)])], container, () => { refill(); onchange(); }, prev.book);
     const selLesson = mkSelect(prefix + "Lesson", "과", [["", "전체"]], container, () => { refill(); onchange(); }, "");

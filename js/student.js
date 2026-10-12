@@ -237,7 +237,7 @@
 
   /** 교재(대분류) → 과(소분류) → 단어 */
   function renderHome() {
-    const books = [...new Set(st.words.map(bookOf))].sort(Util.nat);
+    const books = Util.sortBooks(st.words);      // 교수가 정한 교재 순서
     const bc = $("#bookChips"); bc.innerHTML = "";
     bc.classList.toggle("hidden", !books.some(b => b !== ""));      // 교재명이 하나도 없으면 교재 줄은 숨김
     books.forEach(b => {
