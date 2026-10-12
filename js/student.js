@@ -112,10 +112,13 @@
         Util.toast("가입 완료! 환영해요 🎉", "ok");
         enter(s, "signup");
       } catch (ex) {
-        console.error(ex);
-        err.textContent = ex && ex.message === "phone-exists"
-          ? "이 전화번호로 이미 가입된 ID가 있어요. 로그인 화면의 '아이디 찾기'를 이용해 주세요."
-          : "가입을 저장하지 못했어요. (이미 있는 ID이거나 네트워크 문제)";
+        console.error("회원가입 저장 실패:", ex && ex.code, ex && ex.message);
+        let exists = false;
+        try { exists = !!(await DB.getStudent(id)); } catch (_) { /* 확인 불가 */ }
+        if (ex && ex.message === "phone-exists") err.textContent = "이 전화번호로 이미 가입된 ID가 있어요. 로그인 화면의 '아이디 찾기'를 이용해 주세요.";
+        else if (exists) err.textContent = "이미 사용 중인 ID예요. 다른 ID를 써 주세요.";
+        else if (ex && ex.code === "permission-denied") err.textContent = "서버의 보안 규칙이 아직 최신이 아니라 가입을 저장하지 못했어요. 교수님께 알려 주세요. (Firestore 규칙 게시가 필요합니다)";
+        else err.textContent = "가입을 저장하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.";
       }
     };
     $("#btnLogout").onclick = () => {
